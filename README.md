@@ -136,6 +136,19 @@ interface N8nResponse {
 }
 ```
 
+## 💾 Persistência com PostgreSQL
+
+Para salvar dados no PostgreSQL, defina as variáveis no arquivo `.env`:
+
+```
+POSTGRES_HOST=127.0.0.1
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=MPc3KWhKkLMdsvfqkWTgn3sgTWJPtpcs
+POSTGRES_DB=ubvaia
+```
+
+Se não definir, o sistema usará SQLite local automaticamente.
+
 ## 🐛 Solução de Problemas
 
 ### Webhook não responde

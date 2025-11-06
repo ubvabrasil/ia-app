@@ -52,6 +52,7 @@ export interface ChatState {
   addMessageFromWebSocket: (message: Message) => void;
   setLoading: (loading: boolean) => void;
   updateConfig: (config: Partial<N8nConfig>) => void;
+  updateConfigServer: (config: Partial<N8nConfig>) => Promise<void>;
   toggleTheme: () => void;
   clearMessages: () => void;
   addSession: (sessionId: string) => void;

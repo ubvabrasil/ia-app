@@ -1,7 +1,6 @@
 // Servidor customizado Next.js com WebSocket integrado
 import 'dotenv/config';
 import { createServer } from 'http';
-import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
 
@@ -9,8 +8,13 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Preparar app Next.js
-const app = next({ dev, hostname, port });
+// Preparar app Next.js - DISABLE Turbopack to avoid crashes
+const app = next({ 
+  dev, 
+  hostname, 
+  port,
+  turbo: false, // Disable Turbopack, use stable webpack
+});
 const handle = app.getRequestHandler();
 
 // Tipos de mensagens WebSocket
@@ -24,8 +28,17 @@ app.prepare().then(() => {
   // Criar servidor HTTP
   const server = createServer(async (req, res) => {
     try {
-      const parsedUrl = parse(req.url!, true);
-      await handle(req, res, parsedUrl);
+      // Use WHATWG URL API to parse the URL
+      const url = new URL(req.url!, `http://${req.headers.host}`);
+      // Create a compatible object for Next.js handle function
+      const parsedUrl = {
+        pathname: url.pathname,
+        query: Object.fromEntries(url.searchParams),
+        href: url.href,
+        search: url.search,
+        hash: url.hash,
+      };
+      await handle(req, res, parsedUrl as any);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);
       res.statusCode = 500;
@@ -40,7 +53,9 @@ app.prepare().then(() => {
 
   // Upgrade para WebSocket apenas no path /ws
   server.on('upgrade', (request, socket, head) => {
-    const { pathname } = parse(request.url || '');
+    // Use WHATWG URL API instead of url.parse()
+    const url = new URL(request.url || '/', `http://${request.headers.host}`);
+    const pathname = url.pathname;
     
     // Apenas interceptar nosso WebSocket em /ws
     if (pathname === '/ws') {

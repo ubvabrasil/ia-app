@@ -179,7 +179,13 @@ const Sidebar = ({
 };
 
 export function Chat() {
-  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
+  // Check localStorage for accepted policy on mount
+  const [acceptedPolicy, setAcceptedPolicy] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('policyAccepted') === 'true';
+    }
+    return false;
+  });
   const [clearFile, setClearFile] = useState(false);
   // Reset clearFile flag after FileUploader cleans up
   useEffect(() => {
@@ -416,7 +422,10 @@ export function Chat() {
             </div>
             <Button
               className="bg-primary text-white text-base font-bold py-2 px-6 rounded-lg shadow hover:bg-primary/90 transition-all"
-              onClick={() => setAcceptedPolicy(true)}
+              onClick={() => {
+                localStorage.setItem('policyAccepted', 'true');
+                setAcceptedPolicy(true);
+              }}
             >
               Aceito e quero continuar
             </Button>

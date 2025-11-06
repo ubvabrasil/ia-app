@@ -15,14 +15,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export function SettingsModal() {
-  const { config, updateConfig, clearMessages } = useChatStore();
+  const { config, updateConfigServer, clearMessages } = useChatStore();
   const [open, setOpen] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(config.webhookUrl);
   const [authToken, setAuthToken] = useState(config.authToken || '');
   const [chatName, setChatName] = useState(config.chatName);
 
   const handleSave = () => {
-    updateConfig({
+    // update locally and persist on server
+    updateConfigServer({
       webhookUrl,
       authToken: authToken || undefined,
       chatName,

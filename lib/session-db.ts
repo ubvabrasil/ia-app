@@ -1,32 +1,72 @@
-// Simple SQLite setup for session history
-// Run: npm install better-sqlite3
+// Database adapter: use PostgreSQL when POSTGRES_HOST is provided, otherwise fallback to SQLite
+// For Postgres support add `pg` to dependencies (already added to package.json).
 
-import Database from 'better-sqlite3';
 import path from 'path';
+import Database from 'better-sqlite3';
+import { Pool } from 'pg';
 
-const dbPath = path.resolve(process.cwd(), 'session_history.db');
-const db = new Database(dbPath);
+const usePostgres = !!process.env.POSTGRES_HOST && process.env.POSTGRES_HOST !== '';
 
-// Create tables if not exist
-// Sessions: id (PK), name, created_at
-// Messages: id (PK), session_id (FK), role, content, content_type, created_at
+let dbExport: { type: 'pg'; pool: Pool } | { type: 'sqlite'; db: Database.Database };
 
-db.exec(`
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+const {
+  POSTGRES_HOST = process.env.POSTGRES_HOST,
+  POSTGRES_PORT = '5432',
+  POSTGRES_USER = 'postgres',
+  POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD,
+  POSTGRES_DB = process.env.POSTGRES_DB,
+} = process.env;
 
-CREATE TABLE IF NOT EXISTS messages (
-  id TEXT PRIMARY KEY,
-  session_id TEXT,
-  role TEXT,
-  content TEXT,
-  content_type TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(session_id) REFERENCES sessions(id)
-);
-`);
+const pool = new Pool({
+  host: POSTGRES_HOST,
+  port: Number(POSTGRES_PORT || 5432),
+  user: POSTGRES_USER,
+  password: POSTGRES_PASSWORD,
+  database: POSTGRES_DB,
+});
 
-export default db;
+// Initialize tables asynchronously (don't block startup)
+(async () => {
+  try {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          name TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS messages (
+          id TEXT PRIMARY KEY,
+          session_id TEXT,
+          role TEXT,
+          content TEXT,
+          content_type TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(session_id) REFERENCES sessions(id)
+        );
+      `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value JSONB,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ PostgreSQL tables initialized');
+    }
+  } catch (err) {
+    // Do not crash app during startup; log error instead
+    console.error('❌ Failed to initialize Postgres session tables:', err);
+  }
+})();
+
+dbExport = {
+  type: 'pg' as const,
+  pool,
+};
+
+export default dbExport;

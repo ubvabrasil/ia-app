@@ -1,32 +1,40 @@
-import { NextResponse } from 'next/server';
+import type { NextConfig } from 'next';
 
-const allowedOrigins = [
-  'https://*.easydev.com.br',
-  'http://192.168.3.*',
-  'http://localhost:3000',
-];
-
-export function middleware(req: Request) {
-  const origin = req.headers.get('origin') || '';
-  const res = NextResponse.next();
-
-  // Allow all in dev mode or only whitelisted
-  if (process.env.NODE_ENV === 'development' || allowedOrigins.some(o => origin.match(o.replace('*', '.*')))) {
-    res.headers.set('Access-Control-Allow-Origin', origin || '*');
-    res.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  }
-
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: res.headers,
-    });
-  }
-
-  return res;
-}
-
-export const config = {
-  matcher: '/api/:path*',
+const nextConfig: NextConfig = {
+  // Allow cross-origin requests from local network during development
+  allowedDevOrigins: [
+    '192.168.3.39',
+    '192.168.3.*',
+    'localhost',
+  ],
+  
+  // Performance optimizations for faster startup
+  experimental: {
+    // Optimize package imports
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
+  
+  // Faster refresh in development
+  reactStrictMode: true,
+  
+  // Skip type checking during dev (use IDE for that)
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  
+  // Optimize webpack for faster builds
+  webpack: (config, { dev, isServer }) => {
+    if (dev) {
+      // Faster builds in development
+      config.optimization = {
+        ...config.optimization,
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        splitChunks: false,
+      };
+    }
+    return config;
+  },
 };
+
+export default nextConfig;

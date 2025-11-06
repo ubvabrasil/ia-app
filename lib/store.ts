@@ -25,17 +25,40 @@ export const useChatStore = create<ChatState>()(
       sessionNames: { [defaultConfig.sessionId]: 'Sessão 1' },
 
       addMessage: (message: Omit<Message, 'id' | 'timestamp'>) =>
-        set((state) => ({
-          messages: [
-            ...state.messages,
-            {
-              ...message,
-              id: uuidv4(),
-              timestamp: new Date(),
-              sessionId: message.sessionId || state.currentSessionId,
-            },
-          ],
-        })),
+        set((state) => {
+          const msg = {
+            ...message,
+            id: uuidv4(),
+            timestamp: new Date(),
+            sessionId: message.sessionId || state.currentSessionId,
+          } as Message;
+
+          // Fire-and-forget persist to server API
+          (async () => {
+            try {
+              await fetch('/api/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: msg.sessionId,
+                  role: msg.role,
+                  content: msg.content,
+                  contentType: msg.contentType || 'text',
+                }),
+              });
+            } catch (e) {
+              // swallow network errors (still persisted in localStorage)
+              console.error('Failed to persist message to server:', e);
+            }
+          })();
+
+          return {
+            messages: [
+              ...state.messages,
+              msg,
+            ],
+          };
+        }),
 
       // Adicionar mensagem recebida via WebSocket (já possui id e timestamp)
       addMessageFromWebSocket: (message: Message) =>
@@ -51,10 +74,26 @@ export const useChatStore = create<ChatState>()(
         }),
 
       addSession: (sessionId: string) =>
-        set((state) => ({
-          sessions: [...state.sessions, sessionId],
-          sessionNames: { ...state.sessionNames, [sessionId]: `Sessão ${state.sessions.length + 1}` },
-        })),
+        set((state) => {
+          const name = `Sessão ${state.sessions.length + 1}`;
+          // Try to persist session on server (fire-and-forget)
+          (async () => {
+            try {
+              await fetch('/api/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: sessionId, name }),
+              });
+            } catch (e) {
+              console.error('Failed to persist session to server:', e);
+            }
+          })();
+
+          return {
+            sessions: [...state.sessions, sessionId],
+            sessionNames: { ...state.sessionNames, [sessionId]: name },
+          };
+        }),
 
       setCurrentSession: (sessionId: string) => set({ currentSessionId: sessionId }),
 
@@ -96,6 +135,24 @@ export const useChatStore = create<ChatState>()(
         set((state) => ({
           config: { ...state.config, ...newConfig },
         })),
+      // Persist configuration server-side as well
+      updateConfigServer: async (newConfig: Partial<N8nConfig>) => {
+        const state = get();
+        const merged = { ...state.config, ...newConfig };
+        // Fire-and-forget POST to persist config
+        (async () => {
+          try {
+            await fetch('/api/config', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(merged),
+            });
+          } catch (e) {
+            console.error('Failed to persist config to server:', e);
+          }
+        })();
+        set({ config: merged });
+      },
 
       toggleTheme: () =>
         set((state) => ({
