@@ -362,8 +362,10 @@ export function Chat() {
       }
       const service = new N8nService({ ...config, webhookUrl });
       if (selectedAudio) {
-        // Enviar áudio
-        const audioFile = new File([selectedAudio], 'audio.wav', { type: 'audio/wav' });
+        // Enviar áudio (usar .mp3 quando possível)
+        const inferredType = selectedAudio.type || '';
+        const fileName = inferredType.includes('mpeg') || inferredType.includes('mp3') ? 'audio.mp3' : 'audio.mp3';
+        const audioFile = new File([selectedAudio], fileName, { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(selectedAudio);
         addMessageAndBroadcast({
           role: 'user',
