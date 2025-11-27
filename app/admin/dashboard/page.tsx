@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +8,10 @@ import { useChatStore } from '@/lib/store';
 import { Message } from '@/lib/types';
 import { MessageBubble } from '@/components/MessageBubble';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
-import { cn } from '@/lib/utils';
+// utils.cn not used here
 import { parseDbTimestamp, formatToSaoPaulo, formatToYMD } from '@/server/datetime';
 
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { RefreshCw } from 'lucide-react';
 import { SortAsc, SortDesc, Bell } from 'lucide-react';
 import {
   Dialog,
@@ -33,7 +32,7 @@ interface SessionData {
   remote_jid?: string | null;
   messages: Message[];
   messageCount: number;
-  lastActivity: Date;
+  lastActivity: Date | null;
 }
 
 export default function AdminDashboard() {
@@ -42,7 +41,6 @@ export default function AdminDashboard() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
@@ -50,6 +48,11 @@ export default function AdminDashboard() {
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [transcribingAudio, setTranscribingAudio] = useState<string | null>(null);
+  const [audioTranscriptions, setAudioTranscriptions] = useState<Record<string, string>>({});
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const store = useChatStore();
 
@@ -57,12 +60,139 @@ export default function AdminDashboard() {
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'message') {
       console.log('📨 Nova mensagem recebida no admin:', message.data);
-      // Recarregar sessões quando nova mensagem chegar
-      loadSessions();
+      // Nova mensagem será carregada pelo polling automático
     }
   });
 
+  // Carregar mensagens de uma sessão específica
+  const loadSessionMessages = useCallback(async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/session/${sessionId}/messages`);
+      if (!res.ok) {
+        console.error('Erro ao carregar mensagens da sessão:', res.status);
+        return [];
+      }
+      const messages = await res.json();
+      
+      // Normalizar mensagens
+      return (Array.isArray(messages) ? messages : []).map((m: any) => {
+        let imageUrl = m.imageUrl || m.image_url || undefined;
+        let audioUrl = m.audioUrl || m.audio_url || undefined;
+        let contentType = m.contentType || m.content_type || 'text';
+        
+        if (audioUrl) {
+          contentType = 'audio';
+        }
+        
+        if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
+          contentType = 'image';
+        } else if (imageUrl && typeof imageUrl === 'string' && imageUrl.match(/^([A-Za-z0-9+/=]+)$/)) {
+          imageUrl = `data:image/png;base64,${imageUrl}`;
+          contentType = 'image';
+        }
+        
+        return {
+          id: m.id || m._id || String(Math.random()),
+          role: m.role || m.sender || 'assistant',
+          content: audioUrl || m.content || m.text || '',
+          contentType,
+          timestamp: parseDbTimestamp(m.timestamp || m.created_at || m.createdAt),
+          imageUrl,
+          audioUrl,
+          audioBase64: m.audioBase64 || m.audio_base64,
+          mimeType: m.mimeType || m.mime_type || (contentType === 'audio' ? 'audio/webm' : undefined),
+          fileName: m.fileName || m.file_name,
+          sessionId: m.sessionId || m.session_id || sessionId,
+        };
+      });
+    } catch (err) {
+      console.error('Erro ao carregar mensagens:', err);
+      return [];
+    }
+  }, []);
+
+  
+
+  const loadSessions = useCallback(async () => {
+    // Evitar múltiplas chamadas simultâneas
+    if (loadingRef.current || !mountedRef.current) {
+      return;
+    }
+    
+    loadingRef.current = true;
+    
+    try {
+      // Usar endpoint otimizado para listar sessões
+      const res = await fetch('/api/session/summary');
+      if (!res.ok) {
+        console.error('Erro ao carregar sessões:', res.status, res.statusText);
+        return;
+      }
+      const sessionsSummary = await res.json();
+      
+      // Validar se sessionsSummary é um array
+      if (!Array.isArray(sessionsSummary)) {
+        console.error('Resposta inválida da API /api/session/summary:', sessionsSummary);
+        return;
+      }
+      
+      if (!mountedRef.current) return;
+      
+      const sessionNames = store.sessionNames || {};
+      
+      // Mapear resumo das sessões (sem mensagens ainda)
+      const sessionsData: SessionData[] = sessionsSummary.map((s: any) => {
+        const displayName = s.nome_completo || sessionNames[s.id] || `Sessão ${s.id.slice(0, 8)}`;
+        return {
+          sessionId: s.id,
+          sessionName: displayName,
+          nome_completo: s.nome_completo || null,
+          remote_jid: s.remote_jid || null,
+          messages: [], // Carregar sob demanda
+          messageCount: s.message_count || 0,
+          lastActivity: s.last_activity ? parseDbTimestamp(s.last_activity) : null,
+        };
+      });
+      
+      // Ordenar por última atividade conforme sortOrder
+      sessionsData.sort((a, b) => {
+        const aTime = a.lastActivity ? a.lastActivity.getTime() : new Date(0).getTime();
+        const bTime = b.lastActivity ? b.lastActivity.getTime() : new Date(0).getTime();
+        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      });
+      
+      if (!mountedRef.current) return;
+      
+      // Manter mensagens da sessão atualmente selecionada
+      setSessions(prev => {
+        return sessionsData.map(newSession => {
+          const oldSession = prev.find(s => s.sessionId === newSession.sessionId);
+          // Se a sessão estava selecionada e já tinha mensagens carregadas, manter
+          if (oldSession && oldSession.sessionId === selectedSession && oldSession.messages.length > 0) {
+            return { ...newSession, messages: oldSession.messages };
+          }
+          return newSession;
+        });
+      });
+      
+      // compute unread based on last seen admin timestamp
+      try {
+        const lastSeen = Number(sessionStorage.getItem('adminLastSeen') || '0');
+        const count = sessionsData.filter(s => s.lastActivity && s.lastActivity.getTime() > lastSeen).length;
+        setUnreadCount(count);
+      } catch {
+        // ignore
+      }
+    } catch (err) {
+      console.error('Erro ao carregar sessões do backend:', err);
+    } finally {
+      loadingRef.current = false;
+    }
+  }, [store, sortOrder, selectedSession]);
+
   useEffect(() => {
+    mountedRef.current = true;
+    
     // Verificar autenticação
     const adminAuth = sessionStorage.getItem('adminAuth');
     if (adminAuth !== 'true') {
@@ -70,6 +200,19 @@ export default function AdminDashboard() {
       return;
     }
     setIsAuthenticated(true);
+
+    // Carregar datas disponíveis
+    const loadDates = async () => {
+      try {
+        const res = await fetch('/api/session/dates');
+        if (res.ok) {
+          const dates = await res.json();
+          setAvailableDates(dates);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar datas:', err);
+      }
+    };
 
     // Predefinir o período para HOJE por padrão (usuário pode alterar)
     try {
@@ -84,103 +227,102 @@ export default function AdminDashboard() {
     }
 
     // Carregar todas as sessões
+    loadDates();
     loadSessions();
 
-    // Polling periódido para manter dashboard sincronizado (além do websocket)
-    const interval = setInterval(() => {
-      loadSessions().catch((e) => console.error('Erro no polling de sessões:', e));
-    }, 5000);
+    // POLLING DESABILITADO - Use o botão de atualização manual no header
+    // Isso evita que a conversa seja interrompida enquanto você está lendo
 
-    return () => clearInterval(interval);
+    return () => {
+      mountedRef.current = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const loadSessions = async () => {
-    try {
-      const res = await fetch('/api/session');
-      const backendSessions = await res.json();
-      const sessionNames = store.sessionNames || {};
-      // Normaliza sessões e mensagens já recebidas
-      const sessionsData: SessionData[] = backendSessions.map((session: any) => {
-        const sessionId = session.id;
-        const sessionMessages: Message[] = (Array.isArray(session.messages) ? session.messages : []).map((m: any) => {
-          // Aceita image_url (backend) ou imageUrl (frontend)
-          let imageUrl = m.imageUrl || m.image_url || undefined;
-          let contentType = m.contentType || m.content_type || 'text';
-          // Se vier base64, converte para formato aceito pelo <Image>
-          if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
-            // Já está em formato base64, só garantir que é string
-            contentType = 'image';
-          } else if (imageUrl && typeof imageUrl === 'string' && imageUrl.match(/^([A-Za-z0-9+/=]+)$/)) {
-            // Se vier só o base64 puro, prefixa
-            imageUrl = `data:image/png;base64,${imageUrl}`;
-            contentType = 'image';
-          }
-          return {
-            id: m.id || m._id || String(Math.random()),
-            role: m.role || m.sender || 'assistant',
-            content: m.content || m.text || '',
-            contentType,
-            timestamp: parseDbTimestamp(m.timestamp || m.created_at || m.createdAt),
-            imageUrl,
-            fileName: m.fileName || m.file_name,
-            sessionId: m.sessionId || m.session_id || sessionId,
-          };
-        });
-        const lastMessage = sessionMessages[sessionMessages.length - 1];
-        // Preferir mostrar nome_completo quando disponível.
-        // Caso não exista no objeto session, tentar extrair de mensagens (campo nome_completo em mensagens)
-        const findNameInMessages = () => {
-          // procurar mensagem do usuário que tenha campo nome_completo
-          for (let i = sessionMessages.length - 1; i >= 0; i--) {
-            const mm: any = (sessionMessages as any)[i];
-            // mensagem pode conter nome_completo diretamente
-            if (mm && (mm as any).nome_completo) return (mm as any).nome_completo;
-          }
-          // heurística: procurar a primeira mensagem do usuário que pareça um nome
-          const nameLikeRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]{2,60}$/;
-          for (let i = sessionMessages.length - 1; i >= 0; i--) {
-            const mm: any = (sessionMessages as any)[i];
-            if (!mm) continue;
-            if (mm.role === 'user' && typeof mm.content === 'string') {
-              const t = mm.content.trim();
-              const words = t.split(/\s+/).filter(Boolean);
-              if (t.length >= 2 && t.length <= 60 && words.length > 0 && words.length <= 3 && words.every((w: string) => nameLikeRegex.test(w))) {
-                return t;
-              }
-            }
-          }
-          return null;
-        };
+  // Auto-transcrever áudios ao carregar mensagens
+  useEffect(() => {
+    if (!selectedSession || !sessions.length) return;
+    
+    const session = sessions.find(s => s.sessionId === selectedSession);
+    if (!session?.messages) return;
+    
+    // Transcrever automaticamente todos os áudios que ainda não foram transcritos
+    const audioMessages = session.messages.filter(msg => 
+      msg.contentType === 'audio' && 
+      !audioTranscriptions[msg.id] && 
+      transcribingAudio !== msg.id &&
+      (((msg as any).audioBase64) || msg.audioUrl)
+    );
+    
+    // Transcrever um de cada vez para evitar sobrecarga
+    if (audioMessages.length > 0 && !transcribingAudio) {
+      const firstAudio = audioMessages[0];
+      transcribeAudio(firstAudio.audioUrl || firstAudio.content, firstAudio.id, firstAudio);
+    }
+  }, [selectedSession, sessions, audioTranscriptions, transcribingAudio]);
 
-        const inferredName = findNameInMessages();
-        const displayName = session.nome_completo || inferredName || session.name || sessionNames[sessionId] || `Sessão ${sessionId.slice(0, 8)}`;
-        return {
-          sessionId,
-          sessionName: displayName,
-          nome_completo: session.nome_completo || inferredName || null,
-          remote_jid: session.remote_jid || null,
-          messages: sessionMessages,
-          messageCount: sessionMessages.length,
-          lastActivity: lastMessage?.timestamp ? parseDbTimestamp(lastMessage.timestamp) : null,
-        };
-      });
-      // Ordenar por última atividade conforme sortOrder
-      sessionsData.sort((a, b) => {
-        const aTime = a.lastActivity ? a.lastActivity.getTime() : new Date(0).getTime();
-        const bTime = b.lastActivity ? b.lastActivity.getTime() : new Date(0).getTime();
-        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
-      });
-      setSessions(sessionsData);
-      // compute unread based on last seen admin timestamp
-      try {
-        const lastSeen = Number(sessionStorage.getItem('adminLastSeen') || '0');
-        const count = sessionsData.filter(s => s.lastActivity.getTime() > lastSeen).length;
-        setUnreadCount(count);
-      } catch (e) {
-        // ignore
+  const transcribeAudio = async (audioUrl: string, messageId: string, message?: any) => {
+    try {
+      setTranscribingAudio(messageId);
+      
+      let audioBlob: Blob;
+      
+      // Se tiver audioBase64 na mensagem, usar diretamente
+      if (message?.audioBase64) {
+        const mimeType = message.mimeType || 'audio/webm';
+        const base64Response = await fetch(`data:${mimeType};base64,${message.audioBase64}`);
+        audioBlob = await base64Response.blob();
+      } else if (audioUrl && audioUrl.startsWith('blob:')) {
+        // Se for blob URL, fazer fetch direto
+        const audioResponse = await fetch(audioUrl);
+        audioBlob = await audioResponse.blob();
+      } else if (audioUrl && audioUrl.startsWith('data:')) {
+        // Se for data URL, converter
+        const audioResponse = await fetch(audioUrl);
+        audioBlob = await audioResponse.blob();
+      } else {
+        throw new Error('Formato de áudio não suportado para transcrição');
       }
-    } catch (err) {
-      console.error('Erro ao carregar sessões do backend:', err);
+      
+      // Preparar FormData para Groq
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'audio.webm');
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'pt');
+      formData.append('response_format', 'json');
+      
+      // Chamar API Groq
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`
+                },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erro Groq API:', errorText);
+        throw new Error(`Erro na transcrição: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const transcription = result.text || 'Transcrição não disponível';
+      
+      // Salvar transcrição
+      setAudioTranscriptions(prev => ({
+        ...prev,
+        [messageId]: transcription,
+      }));
+      
+    } catch (error) {
+      console.error('Erro ao transcrever áudio:', error);
+      setAudioTranscriptions(prev => ({
+        ...prev,
+        [messageId]: `Erro: ${error instanceof Error ? error.message : 'Falha na transcrição'}`,
+      }));
+    } finally {
+      setTranscribingAudio(null);
     }
   };
 
@@ -220,22 +362,27 @@ export default function AdminDashboard() {
     return true;
   });
 
-  // Build list of available dates (YYYY-MM-DD) that have at least one message
-  const availableDatesSet = new Set(
-    sessions
-      .flatMap((s) => s.messages)
-      .map((m) => {
-        const d = parseDbTimestamp(m.timestamp);
-        return d ? (formatToYMD(d) as string) : null;
-      })
-      .filter(Boolean) as string[]
-  );
-  const availableDatesAsc = Array.from(availableDatesSet).sort((a, b) => (a < b ? -1 : 1)); // oldest -> newest
-  const availableDatesDesc = Array.from(availableDatesSet).sort((a, b) => (a < b ? 1 : -1)); // newest -> oldest
+  // Usar datas carregadas do banco de dados
+  const availableDatesAsc = availableDates.sort((a, b) => (a < b ? -1 : 1));
 
   const selectedSessionData = selectedSession
     ? sessions.find(s => s.sessionId === selectedSession)
     : null;
+
+  // Carregar mensagens quando uma sessão é selecionada
+  useEffect(() => {
+    if (selectedSession && selectedSessionData && selectedSessionData.messages.length === 0) {
+      loadSessionMessages(selectedSession).then(messages => {
+        if (!mountedRef.current) return;
+        setSessions(prev => prev.map(s => 
+          s.sessionId === selectedSession 
+            ? { ...s, messages } 
+            : s
+        ));
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSession]);
 
   // Optional small notifications panel (shows recent sessions with activity)
   const recentSessions = sessions.slice(0, 6);
@@ -248,15 +395,25 @@ export default function AdminDashboard() {
     );
   }
 
+  // Calcular métricas do dashboard
+  const totalSessions = sessions.length;
+  const totalMessages = sessions.reduce((acc, s) => acc + s.messageCount, 0);
+  const todaySessions = sessions.filter(s => {
+    const today = new Date();
+    const sessionDate = s.lastActivity;
+    return sessionDate && sessionDate.toDateString() === today.toDateString();
+  }).length;
+  const avgMessagesPerSession = totalSessions > 0 ? Math.round(totalMessages / totalSessions) : 0;
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="rounded-full bg-blue-100 dark:bg-blue-500/10 p-2 border border-blue-200 dark:border-blue-500/20">
+            <div className="rounded-xl bg-primary p-3 shadow-md">
               <svg
-                className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                className="w-6 h-6 text-primary-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -270,35 +427,78 @@ export default function AdminDashboard() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100">Dashboard Admin</h1>
-              <p className="text-sm text-slate-600 dark:text-zinc-400">
-                {sessions.length} sessões | {sessions.reduce((acc, s) => acc + s.messageCount, 0)} mensagens
+              <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
+              <p className="text-sm text-slate-600 dark:text-zinc-400 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                  {totalSessions} sessões
+                </span>
+                <span className="text-slate-400 dark:text-zinc-600">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                  </svg>
+                  {totalMessages} mensagens
+                </span>
               </p>
             </div>
             {/* Indicador de conexão WebSocket */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs border ${isConnected
-                ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-300 dark:border-green-500/20'
-                : 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/20'
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm ${
+              isConnected
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
               }`}>
               <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                 }`}></span>
-              {isConnected ? 'Tempo Real Ativo' : 'Desconectado'}
+              {isConnected ? 'Tempo Real' : 'Offline'}
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Botão de atualização manual */}
+            <button
+              onClick={async () => {
+                loadSessions();
+                // Recarregar datas também
+                try {
+                  const res = await fetch('/api/session/dates');
+                  if (res.ok) {
+                    const dates = await res.json();
+                    setAvailableDates(dates);
+                  }
+                } catch (err) {
+                  console.error('Erro ao recarregar datas:', err);
+                }
+              }}
+              disabled={loadingRef.current}
+              className="p-2 rounded-lg hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Atualizar sessões"
+              title="Atualizar sessões manualmente"
+            >
+              <svg 
+                className={`w-5 h-5 text-foreground ${loadingRef.current ? 'animate-spin' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            
             {/* Notificação: sino com badge vermelho */}
             <div className="relative">
               <button
-              className="relative p-2 rounded hover:bg-slate-100 dark:hover:bg-zinc-800"
+              className="relative p-2 rounded hover:bg-accent transition-colors"
               onClick={() => {
-                try { sessionStorage.setItem('adminLastSeen', String(Date.now())); } catch (e) { }
+                try { sessionStorage.setItem('adminLastSeen', String(Date.now())); } catch { }
                 setUnreadCount(0);
                 setShowNotifications((s) => !s);
               }}
               aria-label="Notificações"
               title="Notificações"
               >
-              <Bell className="w-5 h-5 text-slate-700 dark:text-zinc-200" />
+              <Bell className="w-5 h-5 text-foreground" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
                 {unreadCount}
@@ -344,7 +544,7 @@ export default function AdminDashboard() {
                         >
                           <div className="flex items-center justify-between">
                           <span className="font-medium text-blue-700 dark:text-blue-300 truncate">{s.sessionName}</span>
-                          <span className="text-xs text-slate-500 dark:text-zinc-400">{formatToSaoPaulo(s.lastActivity)}</span>
+                          <span className="text-xs text-slate-500 dark:text-zinc-400">{s.lastActivity ? formatToSaoPaulo(s.lastActivity) : 'Sem atividade'}</span>
                           </div>
                           {lastMessages.length > 0 && (
                           <div className="mt-1 space-y-1">
@@ -371,35 +571,7 @@ export default function AdminDashboard() {
                 )}
                 </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                if (isSyncing) return;
-                setIsSyncing(true);
-                try {
-                  await loadSessions();
-                } catch (e) {
-                  console.error('Erro ao sincronizar sessões:', e);
-                } finally {
-                  setIsSyncing(false);
-                }
-              }}
-              className="border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-              aria-label="Sincronizar sessões"
-            >
-              {isSyncing ? (
-                <svg className="w-4 h-4 animate-spin mr-2 inline-block" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 mr-2 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-2.64-6.36" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 3v6h-6" />
-                </svg>
-              )}
-              Sincronizar
-            </Button>
+            
             {/* Sort toggle: newest/oldest */}
             <Button
               variant="outline"
@@ -469,21 +641,98 @@ export default function AdminDashboard() {
         </div>
       </header>
 
+      {/* Metrics Cards Section */}
+      <div className="container mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Sessions Card */}
+          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Sessões</CardTitle>
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{totalSessions}</div>
+              <p className="text-xs text-muted-foreground mt-1">Conversas registradas</p>
+            </CardContent>
+          </Card>
+
+          {/* Today Sessions Card */}
+          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Sessões Hoje</CardTitle>
+                <div className="rounded-lg bg-green-500/10 p-2">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{todaySessions}</div>
+              <p className="text-xs text-muted-foreground mt-1">Ativas nas últimas 24h</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Messages Card */}
+          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Mensagens</CardTitle>
+                <div className="rounded-lg bg-purple-500/10 p-2">
+                  <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{totalMessages}</div>
+              <p className="text-xs text-muted-foreground mt-1">Trocadas com o bot</p>
+            </CardContent>
+          </Card>
+
+          {/* Average Messages Card */}
+          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Média por Sessão</CardTitle>
+                <div className="rounded-lg bg-orange-500/10 p-2">
+                  <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                  </svg>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{avgMessagesPerSession}</div>
+              <p className="text-xs text-muted-foreground mt-1">Mensagens por conversa</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div
-        className="fixed inset-x-0 top-32 bottom-8 mx-auto container px-1 py-0 flex flex-col overflow-hidden"
+        className="container mx-auto px-6 pb-6 flex flex-col max-h-[calc(100vh-16rem)]"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-hidden">
           {/* Lista de Sessões */}
-            <div className="lg:col-span-1 flex flex-col overflow-hidden">
-            <Card className="bg-white dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 shadow-md flex flex-col h-full">
+            <div className="lg:col-span-1 flex flex-col overflow-hidden rounded-xl border-border bg-card shadow-lg h-full">
+            <Card className="bg-card/50 border-border shadow-md flex flex-col h-full">
               <CardHeader className="shrink-0">
-              <CardTitle className="text-slate-900 dark:text-zinc-100">
+              <CardTitle className="text-foreground">
                 Sessões de Conversa
               </CardTitle>
-              <CardDescription className="text-slate-600 dark:text-zinc-400">
+              <CardDescription className="text-muted-foreground">
                 Clique em uma sessão para ver os detalhes
               </CardDescription>
-              <div className="mt-2 text-sm text-slate-500 dark:text-zinc-400">
+              <div className="mt-2 text-sm text-muted-foreground">
                 {filteredSessions.length} sessões encontradas
               </div>
 
@@ -494,14 +743,14 @@ export default function AdminDashboard() {
                 placeholder="Buscar sessão..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground"
                 />
 
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
                 <div className="sm:col-span-2 relative">
                   <button
                   onClick={() => setShowPeriodPicker((s) => !s)}
-                  className="w-full text-left px-3 py-2 border border-slate-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100"
+                  className="w-full text-left px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   aria-haspopup="true"
                   aria-expanded={showPeriodPicker}
                   >
@@ -530,10 +779,10 @@ export default function AdminDashboard() {
                   </button>
 
                   {showPeriodPicker && (
-                  <div className="absolute left-0 mt-2 w-[380px] z-30 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded shadow-lg p-3">
+                  <div className="absolute left-0 mt-2 w-[380px] z-30 bg-card border border-border rounded shadow-lg p-3">
                     <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-xs text-slate-600 dark:text-zinc-400">
+                      <label className="text-xs text-muted-foreground">
                       Início
                       </label>
                       <select
@@ -545,7 +794,7 @@ export default function AdminDashboard() {
                         setEndDate(null);
                         }
                       }}
-                      className="w-full mt-1 px-2 py-2 border border-slate-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100"
+                      className="w-full mt-1 px-2 py-2 border border-border rounded-md bg-background text-foreground"
                       >
                       <option value="">Todas</option>
                       {availableDatesAsc.map((d) => (
@@ -556,13 +805,13 @@ export default function AdminDashboard() {
                       </select>
                     </div>
                     <div className="flex-1">
-                      <label className="text-xs text-slate-600 dark:text-zinc-400">
+                      <label className="text-xs text-muted-foreground">
                       Fim
                       </label>
                       <select
                       value={endDate || ''}
                       onChange={(e) => setEndDate(e.target.value || null)}
-                      className="w-full mt-1 px-2 py-2 border border-slate-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100"
+                      className="w-full mt-1 px-2 py-2 border border-border rounded-md bg-background text-foreground"
                       >
                       <option value="">Todas</option>
                       {(startDate
@@ -583,14 +832,14 @@ export default function AdminDashboard() {
                       setEndDate(null);
                       setShowPeriodPicker(false);
                       }}
-                      className="text-sm text-slate-600 dark:text-zinc-400 px-3 py-1 rounded-md hover:bg-slate-50 dark:hover:bg-zinc-800"
+                      className="text-sm text-muted-foreground px-3 py-1 rounded-md hover:bg-accent"
                     >
                       Limpar
                     </button>
                     <div>
                       <button
                       onClick={() => setShowPeriodPicker(false)}
-                      className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                      className="inline-flex items-center px-3 py-1 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90"
                       >
                       Aplicar
                       </button>
@@ -617,11 +866,11 @@ export default function AdminDashboard() {
               </div>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-y-auto">
+              <CardContent className="flex-1 overflow-y-auto p-4">
               <div className="space-y-2">
                 {/* Mostra todas as sessões do dia selecionado, mesmo que tenham poucas mensagens */}
                 {filteredSessions.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-zinc-500 text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   Nenhuma sessão encontrada
                 </p>
                 ) : (
@@ -630,31 +879,31 @@ export default function AdminDashboard() {
                   key={session.sessionId}
                   onClick={() => setSelectedSession(session.sessionId)}
                   className={`w-full text-left p-3 rounded-lg border transition-all ${selectedSession === session.sessionId
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-md'
-                    : 'border-slate-200 dark:border-zinc-700 hover:border-blue-400 dark:hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                    ? 'border-primary bg-primary/10 shadow-md'
+                    : 'border-border hover:border-primary/50 hover:bg-accent'
                   }`}
                   >
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-sm truncate text-slate-900 dark:text-zinc-100">
+                    <h3 className="font-medium text-sm truncate text-foreground">
                     {session.sessionName}
                     </h3>
-                    <span className="text-xs text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs text-muted-foreground">
                     {session.messageCount} msgs
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-zinc-500">
-                    {formatToSaoPaulo(session.lastActivity)}
+                  <p className="text-xs text-muted-foreground">
+                    {session.lastActivity ? formatToSaoPaulo(session.lastActivity) : 'Sem atividade'}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 font-mono">
+                  <p className="text-xs text-muted-foreground mt-1 font-mono">
                     ID: {session.sessionId.slice(0, 8)}...
                   </p>
                   {session.nome_completo && (
-                    <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                     Nome: {session.nome_completo}
                     </p>
                   )}
                   {session.remote_jid && (
-                    <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                     WhatsApp: {session.remote_jid}
                     </p>
                   )}
@@ -670,7 +919,7 @@ export default function AdminDashboard() {
                     ).map((date) => (
                     <span
                       key={date}
-                      className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-xs rounded text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700"
+                      className="px-2 py-0.5 bg-accent text-xs rounded text-foreground border border-border"
                     >
                       {date}
                     </span>
@@ -685,57 +934,93 @@ export default function AdminDashboard() {
             </div>
 
           {/* Detalhe da Sessão */}
-          <div className="lg:col-span-2 flex flex-col overflow-hidden">
+          <div className="lg:col-span-2 flex flex-col overflow-hidden h-full">
             {selectedSessionData ? (
-              <Card className="bg-white dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 shadow-md flex flex-col h-full">
+              <Card className="bg-card/50 border-border shadow-md flex flex-col h-full">
                 <CardHeader className="shrink-0">
-                  <CardTitle className="text-slate-900 dark:text-zinc-100">
+                  <CardTitle className="text-foreground">
                     {selectedSessionData.sessionName}
                   </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-zinc-400">
+                  <CardDescription className="text-muted-foreground">
                     {selectedSessionData.messageCount} mensagens | Última atividade:{' '}
-                    {formatToSaoPaulo(selectedSessionData.lastActivity)}
+                    {selectedSessionData.lastActivity ? formatToSaoPaulo(selectedSessionData.lastActivity) : 'Sem atividade'}
                   </CardDescription>
                   <div className="mt-2 space-y-1">
-                    <p className="text-xs text-slate-500 dark:text-zinc-500 font-mono">
+                    <p className="text-xs text-muted-foreground font-mono">
                       Session ID: {selectedSessionData.sessionId}
                     </p>
                     {selectedSessionData.nome_completo && (
-                      <p className="text-xs text-slate-500 dark:text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Nome do cliente: {selectedSessionData.nome_completo}
                       </p>
                     )}
                     {selectedSessionData.remote_jid && (
-                      <p className="text-xs text-slate-500 dark:text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         WhatsApp: {selectedSessionData.remote_jid}
                       </p>
                     )}
                   </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 overflow-y-auto">
+                <CardContent className="flex-1 overflow-y-auto p-4">
                   <div className="space-y-4">
                     {selectedSessionData.messages.length === 0 ? (
-                      <p className="text-center text-slate-500 dark:text-zinc-500 py-8">
+                      <p className="text-center text-muted-foreground py-8">
                         Nenhuma mensagem nesta sessão
                       </p>
                     ) : (
                       selectedSessionData.messages.map((message, idx) => (
-                        <MessageBubble
-                          key={message.id || idx}
-                          message={message}
-                          userName={selectedSessionData.nome_completo || undefined}
-                        />
+                        <div key={message.id || idx} className="space-y-2">
+                          <MessageBubble
+                            message={message}
+                            userName={selectedSessionData.nome_completo || undefined}
+                          />
+                          
+                          {/* Botão de transcrição para mensagens de áudio */}
+                          {message.contentType === 'audio' && (message.audioUrl || (message as any).audioBase64 || message.content) && (
+                            <div className={`${message.role === 'user' ? 'ml-auto' : 'mr-auto'} max-w-md`}>
+                              {audioTranscriptions[message.id] ? (
+                                <div className="bg-accent/50 rounded-lg p-3 border border-border">
+                                  <p className="text-xs font-semibold text-foreground mb-1">🎤 Transcrição:</p>
+                                  <p className="text-sm text-foreground italic">{audioTranscriptions[message.id]}</p>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => transcribeAudio(message.audioUrl || message.content, message.id, message)}
+                                  disabled={transcribingAudio === message.id}
+                                  className="w-full text-xs px-3 py-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                  {transcribingAudio === message.id ? (
+                                    <>
+                                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Transcrevendo...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      Transcrever áudio
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ))
                     )}
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-white dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 shadow-md flex items-center justify-center flex-1">
+              <Card className="bg-card/50 border-border shadow-md flex items-center justify-center flex-1">
                 <CardContent className="text-center py-24">
                   <svg
-                    className="w-16 h-16 mx-auto text-slate-400 dark:text-zinc-600 mb-4"
+                    className="w-16 h-16 mx-auto text-muted-foreground mb-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -747,7 +1032,7 @@ export default function AdminDashboard() {
                       d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                     />
                   </svg>
-                  <p className="text-slate-600 dark:text-zinc-500">
+                  <p className="text-muted-foreground">
                     Selecione uma sessão para ver as conversas
                   </p>
                 </CardContent>

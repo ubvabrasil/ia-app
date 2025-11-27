@@ -57,7 +57,7 @@ export function useAudioRecorder() {
       const l = float32Array.length;
       const buffer = new Int16Array(l);
       for (let i = 0; i < l; i++) {
-        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
         buffer[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
       }
       return buffer;

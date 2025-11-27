@@ -72,16 +72,13 @@ export class N8nService {
     additionalMessage?: string
   ): Promise<N8nResponse> {
     try {
-      // Converter arquivo para base64
-      const base64 = await this.fileToBase64(file);
-
-      const payload: N8nRequest = {
-        file: base64,
-        fileName: file.name,
-        fileType: file.type,
-        message: additionalMessage,
-        session_id: this.config.sessionId,
-      };
+      // Enviar arquivo como multipart/form-data (como um arquivo real)
+      const form = new FormData();
+      form.append('file', file, file.name);
+      form.append('fileName', file.name);
+      form.append('fileType', file.type || 'application/octet-stream');
+      form.append('message', additionalMessage || '');
+      form.append('session_id', this.config.sessionId || '');
 
       // Ensure the webhook URL is valid and log it for debugging
       if (!this.config.webhookUrl) {
@@ -91,16 +88,15 @@ export class N8nService {
 
       // Add detailed error handling for network issues
       try {
-        console.log('Sending payload to webhook:', JSON.stringify(payload, null, 2));
-        console.log('Webhook URL:', this.config.webhookUrl);
+        console.log('Sending form-data payload to webhook. URL:', this.config.webhookUrl);
 
-        const response = await axios.post(this.config.webhookUrl, payload, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(this.config.authToken && {
-              Authorization: `Bearer ${this.config.authToken}`,
-            }),
-          },
+        const headers: Record<string, string> = {
+          // Let the browser/axios set the Content-Type with boundary for FormData
+          ...(this.config.authToken && { Authorization: `Bearer ${this.config.authToken}` }),
+        };
+
+        const response = await axios.post(this.config.webhookUrl, form, {
+          headers,
           // Accept any response type
           responseType: 'json',
           validateStatus: () => true, // Accept all HTTP status codes
