@@ -6,11 +6,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     // Log incoming payload for debugging persistence
     console.log('POST /api/message payload:', JSON.stringify(body));
-    const { sessionId, role, content, contentType, imageUrl, nome_completo, remote_jid } = body;
+    const { sessionId, role, content, contentType, imageUrl, audioUrl, audioBase64, mimeType, nome_completo, remote_jid } = body;
     if (!sessionId || !role || !content) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
-    await saveMessage({ sessionId, role, content, contentType: contentType || 'text', imageUrl, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+    await saveMessage({ sessionId, role, content, contentType: contentType || 'text', imageUrl, audioUrl, audioBase64, mimeType, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
     // After saving, attempt to read back the latest message(s) to log created_at and DB state
     try {
       const messages = await getMessagesBySession(sessionId);

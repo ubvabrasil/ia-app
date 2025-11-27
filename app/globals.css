@@ -154,3 +154,61 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-in-out;
 }
+
+/* Estilos personalizados para o player de áudio */
+@layer components {
+  .audio-player-modern {
+    height: 48px;
+    filter: brightness(1);
+    transition: all 0.3s ease;
+  }
+  
+  .audio-player-modern::-webkit-media-controls-enclosure {
+    border-radius: 12px;
+    background: transparent;
+  }
+  
+  .audio-player-modern::-webkit-media-controls-panel {
+    background: transparent;
+  }
+  
+  .audio-player-modern::-webkit-media-controls-play-button {
+    background-color: hsl(var(--primary));
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    margin: 0 8px;
+    filter: brightness(1);
+  }
+  
+  .audio-player-modern::-webkit-media-controls-play-button:hover {
+    filter: brightness(1.1);
+  }
+  
+  .audio-player-modern::-webkit-media-controls-current-time-display,
+  .audio-player-modern::-webkit-media-controls-time-remaining-display {
+    color: hsl(var(--foreground) / 0.7);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  .audio-player-modern::-webkit-media-controls-timeline {
+    background: hsl(var(--foreground) / 0.1);
+    border-radius: 4px;
+    height: 4px;
+    margin: 0 8px;
+  }
+  
+  .audio-player-modern::-webkit-media-controls-timeline::-webkit-slider-thumb {
+    background: hsl(var(--primary));
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+  }
+  
+  .dark .audio-player-modern::-webkit-media-controls-current-time-display,
+  .dark .audio-player-modern::-webkit-media-controls-time-remaining-display {
+    color: hsl(var(--foreground) / 0.8);
+  }
+}

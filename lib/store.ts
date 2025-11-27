@@ -42,7 +42,14 @@ export const useChatStore = create<ChatState>()(
                 content: msg.content,
                 contentType: msg.contentType || 'text',
                 imageUrl: msg.imageUrl || undefined,
+                audioUrl: msg.audioUrl || undefined,
               };
+              
+              // Incluir audioBase64 e mimeType se disponível (para transcrição posterior)
+              if (msg.contentType === 'audio' && (message as any).audioBase64) {
+                payload.audioBase64 = (message as any).audioBase64;
+                payload.mimeType = (message as any).mimeType || 'audio/webm';
+              }
 
               // Add user metadata if available
               const nome_completo = localStorage.getItem('userName');

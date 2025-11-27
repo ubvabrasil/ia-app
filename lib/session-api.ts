@@ -9,6 +9,9 @@ export type MessageRecord = {
   content: string;
   contentType: string;
   imageUrl?: string;
+  audioUrl?: string;
+  audioBase64?: string;
+  mimeType?: string;
   nome_completo?: string | null;
   remote_jid?: string | null;
 };
@@ -40,7 +43,7 @@ export async function getAllSessionsWithMessages(limit: number = 20): Promise<an
   return result;
 }
 
-export async function saveMessage({ sessionId, role, content, contentType, imageUrl, nome_completo, remote_jid }: MessageRecord): Promise<void> {
+export async function saveMessage({ sessionId, role, content, contentType, imageUrl, audioUrl, audioBase64, mimeType, nome_completo, remote_jid }: MessageRecord): Promise<void> {
   const id = uuidv4();
   try {
     // Ensure session exists
@@ -55,6 +58,11 @@ export async function saveMessage({ sessionId, role, content, contentType, image
       role,
       content,
       content_type: contentType,
+      image_url: imageUrl || null,
+      audio_url: audioUrl || null,
+      audio_base64: audioBase64 || null,
+      mime_type: mimeType || null,
+    });
       image_url: imageUrl || null,
     });
 

@@ -332,20 +332,21 @@ export function MessageBubble({ message, onReply, userName }: MessageBubbleProps
         )}
 
         {/* Conteúdo de áudio */}
-        {message.contentType === 'audio' && message.audioUrl && (
-          <div className="space-y-2">
-            {message.content && (
-              <p className="whitespace-pre-wrap break-words mb-2">
-                {message.content}
-              </p>
-            )}
-            <div className="bg-muted/50 rounded-lg p-3">
+        {message.contentType === 'audio' && (message.audioUrl || message.audioBase64) && (
+          <div className="space-y-2 min-w-[280px]">
+            <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-3 backdrop-blur-sm">
               <audio
                 controls
-                className="w-full max-w-sm"
+                className="w-full audio-player-modern"
                 preload="metadata"
               >
-                <source src={message.audioUrl} type="audio/wav" />
+                {(() => {
+                  const src = message.audioUrl || (message.audioBase64 ? `data:${message.mimeType || 'audio/wav'};base64,${message.audioBase64}` : undefined);
+                  if (src) {
+                    return <source src={src} type={message.mimeType || 'audio/wav'} />;
+                  }
+                  return null;
+                })()}
                 Seu navegador não suporta a reprodução de áudio.
               </audio>
             </div>
