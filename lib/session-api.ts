@@ -63,8 +63,6 @@ export async function saveMessage({ sessionId, role, content, contentType, image
       audio_base64: audioBase64 || null,
       mime_type: mimeType || null,
     });
-      image_url: imageUrl || null,
-    });
 
     if (nome_completo || remote_jid) {
       try {
