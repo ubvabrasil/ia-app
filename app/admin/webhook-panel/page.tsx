@@ -103,23 +103,35 @@ export default function WebhookPanel() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-10">
-      <h2 className="text-2xl font-bold mb-6">Integrações</h2>
+    <div className="max-w-4xl mx-auto p-8 bg-card rounded-lg shadow-lg border border-border">
+      <h2 className="text-2xl font-bold mb-6 text-foreground">Integrações</h2>
       <div className="flex gap-4 mb-8">
         <button
-          className={`px-4 py-2 rounded font-bold border ${activeTab === 'webhook' ? 'bg-primary text-white' : 'bg-muted text-primary border-primary'}`}
+          className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+            activeTab === 'webhook' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-muted text-foreground hover:bg-muted/80'
+          }`}
           onClick={() => setActiveTab('webhook')}
         >
           Webhook
         </button>
         <button
-          className={`px-4 py-2 rounded font-bold border ${activeTab === 'websocket' ? 'bg-primary text-white' : 'bg-muted text-primary border-primary'}`}
+          className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+            activeTab === 'websocket' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-muted text-foreground hover:bg-muted/80'
+          }`}
           onClick={() => setActiveTab('websocket')}
         >
           WebSocket
         </button>
         <button
-          className={`px-4 py-2 rounded font-bold border ${activeTab === 'n8n' ? 'bg-primary text-white' : 'bg-muted text-primary border-primary'}`}
+          className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+            activeTab === 'n8n' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-muted text-foreground hover:bg-muted/80'
+          }`}
           onClick={() => setActiveTab('n8n')}
         >
           n8n
@@ -127,17 +139,17 @@ export default function WebhookPanel() {
       </div>
       {activeTab === 'webhook' && (
         <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Webhook</h3>
+          <h3 className="text-xl font-semibold mb-4 text-foreground">Webhook</h3>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Enabled</label>
-            <input type="checkbox" checked={webhookEnabled} onChange={e => setWebhookEnabled(e.target.checked)} />
+            <label className="font-semibold text-foreground">Enabled</label>
+            <input type="checkbox" checked={webhookEnabled} onChange={e => setWebhookEnabled(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Enable or disable the webhook</span>
           </div>
           <div className="mb-4">
-            <label className="font-semibold block mb-1">Webhook Base URL</label>
+            <label className="font-semibold block mb-1 text-foreground">Webhook Base URL</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border border-border rounded px-3 py-2 w-full bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
               placeholder="https://yourdomain.com/webhook"
@@ -145,26 +157,27 @@ export default function WebhookPanel() {
             <span className="text-xs text-muted-foreground">Create a route for each event by adding the event name to the end of the URL</span>
           </div>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Webhook Base64</label>
-            <input type="checkbox" checked={webhookBase64} onChange={e => setWebhookBase64(e.target.checked)} />
+            <label className="font-semibold text-foreground">Webhook Base64</label>
+            <input type="checkbox" checked={webhookBase64} onChange={e => setWebhookBase64(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Send media base64 data in webhook</span>
           </div>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Webhook by Events</label>
-            <input type="checkbox" checked={webhookByEvents} onChange={e => setWebhookByEvents(e.target.checked)} />
+            <label className="font-semibold text-foreground">Webhook by Events</label>
+            <input type="checkbox" checked={webhookByEvents} onChange={e => setWebhookByEvents(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Enable or disable sending webhook by events</span>
           </div>
           <div className="mb-4 flex gap-2">
-            <button className="bg-primary text-white px-3 py-1 rounded" onClick={markAllWebhook}>Mark All</button>
-            <button className="bg-secondary text-secondary-foreground px-3 py-1 rounded" onClick={unmarkAllWebhook}>Unmark All</button>
+            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors" onClick={markAllWebhook}>Mark All</button>
+            <button className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 transition-colors" onClick={unmarkAllWebhook}>Unmark All</button>
           </div>
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {EVENTS.map(event => (
-              <label key={event} className="flex items-center gap-2 border rounded px-2 py-1">
+              <label key={event} className="flex items-center gap-2 border border-border rounded px-2 py-1 bg-background text-foreground hover:bg-muted/50 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={webhookEventStates[event]}
                   onChange={() => handleWebhookEventChange(event)}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                 />
                 <span className="text-sm font-mono">{event}</span>
               </label>
@@ -172,31 +185,26 @@ export default function WebhookPanel() {
           </div>
         </div>
       )}
-      {activeTab === 'webhook' && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Webhook</h3>
-          {/* ...existing code... */}
-        </div>
-      )}
       {activeTab === 'websocket' && (
         <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">WebSocket</h3>
+          <h3 className="text-xl font-semibold mb-4 text-foreground">WebSocket</h3>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Enabled</label>
-            <input type="checkbox" checked={wsEnabled} onChange={e => setWsEnabled(e.target.checked)} />
+            <label className="font-semibold text-foreground">Enabled</label>
+            <input type="checkbox" checked={wsEnabled} onChange={e => setWsEnabled(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Enable or disable the websocket</span>
           </div>
           <div className="mb-4 flex gap-2">
-            <button className="bg-primary text-white px-3 py-1 rounded" onClick={markAllWs}>Mark All</button>
-            <button className="bg-secondary text-secondary-foreground px-3 py-1 rounded" onClick={unmarkAllWs}>Unmark All</button>
+            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors" onClick={markAllWs}>Mark All</button>
+            <button className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 transition-colors" onClick={unmarkAllWs}>Unmark All</button>
           </div>
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {EVENTS.map(event => (
-              <label key={event} className="flex items-center gap-2 border rounded px-2 py-1">
+              <label key={event} className="flex items-center gap-2 border border-border rounded px-2 py-1 bg-background text-foreground hover:bg-muted/50 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={wsEventStates[event]}
                   onChange={() => handleWsEventChange(event)}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                 />
                 <span className="text-sm font-mono">{event}</span>
               </label>
@@ -206,17 +214,17 @@ export default function WebhookPanel() {
       )}
       {activeTab === 'n8n' && (
         <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-2">Integração n8n</h3>
+          <h3 className="text-xl font-semibold mb-4 text-foreground">Integração n8n</h3>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Enabled</label>
-            <input type="checkbox" checked={webhookEnabled} onChange={e => setWebhookEnabled(e.target.checked)} />
+            <label className="font-semibold text-foreground">Enabled</label>
+            <input type="checkbox" checked={webhookEnabled} onChange={e => setWebhookEnabled(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Enable or disable n8n integration</span>
           </div>
           <div className="mb-4">
-            <label className="font-semibold block mb-1">n8n Webhook Base URL</label>
+            <label className="font-semibold block mb-1 text-foreground">n8n Webhook Base URL</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border border-border rounded px-3 py-2 w-full bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
               placeholder="https://yourdomain.com/webhook"
@@ -224,26 +232,27 @@ export default function WebhookPanel() {
             <span className="text-xs text-muted-foreground">Use a URL do webhook configurada no n8n</span>
           </div>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Webhook Base64</label>
-            <input type="checkbox" checked={webhookBase64} onChange={e => setWebhookBase64(e.target.checked)} />
+            <label className="font-semibold text-foreground">Webhook Base64</label>
+            <input type="checkbox" checked={webhookBase64} onChange={e => setWebhookBase64(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Enviar mídia como base64 para o n8n</span>
           </div>
           <div className="mb-4 flex items-center gap-4">
-            <label className="font-semibold">Webhook by Events</label>
-            <input type="checkbox" checked={webhookByEvents} onChange={e => setWebhookByEvents(e.target.checked)} />
+            <label className="font-semibold text-foreground">Webhook by Events</label>
+            <input type="checkbox" checked={webhookByEvents} onChange={e => setWebhookByEvents(e.target.checked)} className="w-4 h-4 text-primary border-border rounded focus:ring-primary" />
             <span className="ml-2 text-sm text-muted-foreground">Habilitar envio por eventos</span>
           </div>
           <div className="mb-4 flex gap-2">
-            <button className="bg-primary text-white px-3 py-1 rounded" onClick={markAllWebhook}>Mark All</button>
-            <button className="bg-secondary text-secondary-foreground px-3 py-1 rounded" onClick={unmarkAllWebhook}>Unmark All</button>
+            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors" onClick={markAllWebhook}>Mark All</button>
+            <button className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/90 transition-colors" onClick={unmarkAllWebhook}>Unmark All</button>
           </div>
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {EVENTS.map(event => (
-              <label key={event} className="flex items-center gap-2 border rounded px-2 py-1">
+              <label key={event} className="flex items-center gap-2 border border-border rounded px-2 py-1 bg-background text-foreground hover:bg-muted/50 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={webhookEventStates[event]}
                   onChange={() => handleWebhookEventChange(event)}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                 />
                 <span className="text-sm font-mono">{event}</span>
               </label>
@@ -253,7 +262,7 @@ export default function WebhookPanel() {
       )}
       {/* Fim das abas, botão Save e fechamento do container */}
       <button
-        className="bg-primary text-white px-6 py-2 rounded font-bold w-full mt-4"
+        className="bg-primary text-primary-foreground px-6 py-3 rounded-md font-semibold w-full mt-4 hover:bg-primary/90 transition-colors"
         onClick={handleSave}
       >
         Save
