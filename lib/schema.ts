@@ -15,6 +15,9 @@ export const messages = pgTable('messages', {
   content: text('content'),
   content_type: text('content_type'),
   image_url: text('image_url'),
+  audio_url: text('audio_url'),
+  audio_base64: text('audio_base64'),
+  mime_type: text('mime_type'),
   created_at: timestamp('created_at').defaultNow(),
 });
 
