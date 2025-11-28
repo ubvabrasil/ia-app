@@ -1,0 +1,963 @@
+nohup: ignoring input
+
+> ubva-ia@0.1.0 dev
+> node dev-fast.js
+
+🚀 Starting dev server...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+🚀 Next.js rodando em http://0.0.0.0:3000
+📡 WebSocket disponível em ws://0.0.0.0:3000/ws
+ ○ Compiling / ...
+ GET / 200 in 25.1s (compile: 21.6s, render: 3.5s)
+ GET / 200 in 26.4s (compile: 23.5s, render: 2.9s)
+ GET / 200 in 80s (compile: 78s, render: 2.5s)
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+📨 Broadcasting mensagem: message
+ ○ Compiling /api/session ...
+ GET /api/webhook-config 200 in 3.3s (compile: 2.9s, proxy.ts: 30ms, render: 391ms)
+ GET /api/webhook-config 200 in 99ms (compile: 23ms, proxy.ts: 32ms, render: 45ms)
+POST /api/message payload: {"sessionId":"e06950ce-074f-41ab-b7f0-13d30f502ef6","role":"user","content":"Sugira os melhores tipos de vidro para projetos arquitetônicos","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ POST /api/session 200 in 10.0s (compile: 8.8s, proxy.ts: 525ms, render: 680ms)
+✅ PostgreSQL tables initialized
+ POST /api/session 200 in 10.2s (compile: 9.0s, proxy.ts: 459ms, render: 767ms)
+ POST /api/session 200 in 9.3s (compile: 8.6s, proxy.ts: 40ms, render: 584ms)
+Saved message for session e06950ce-074f-41ab-b7f0-13d30f502ef6: {
+  id: 'ce77862f-e24c-48a3-a089-c3ada31881a2',
+  session_id: 'e06950ce-074f-41ab-b7f0-13d30f502ef6',
+  role: 'user',
+  content: 'Sugira os melhores tipos de vidro para projetos arquitetônicos',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:16:49.478Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 9.4s (compile: 8.1s, proxy.ts: 33ms, render: 1293ms)
+ ○ Compiling /admin/dashboard ...
+ GET /admin/dashboard 200 in 11.9s (compile: 10.8s, render: 1065ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+ GET /admin 200 in 1384ms (compile: 1234ms, render: 150ms)
+❌ Cliente WebSocket desconectado
+ GET /admin/dashboard 200 in 141ms (compile: 17ms, render: 124ms)
+ GET /api/session/dates 200 in 1678ms (compile: 1478ms, proxy.ts: 56ms, render: 144ms)
+ GET /api/session/dates 200 in 140ms (compile: 28ms, proxy.ts: 54ms, render: 58ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+ GET /api/session/summary 200 in 9.6s (compile: 1938ms, proxy.ts: 27ms, render: 7.6s)
+ GET /api/webhook-config 200 in 172ms (compile: 12ms, proxy.ts: 18ms, render: 142ms)
+ GET /api/webhook-config 200 in 114ms (compile: 33ms, proxy.ts: 28ms, render: 53ms)
+ POST /api/webhook-config 200 in 173ms (compile: 18ms, proxy.ts: 21ms, render: 134ms)
+ POST /api/webhook-config 200 in 90ms (compile: 19ms, proxy.ts: 27ms, render: 44ms)
+ POST /api/session 200 in 222ms (compile: 29ms, proxy.ts: 15ms, render: 178ms)
+Error saving session via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 9f08101b-1fd8-4896-a970-259c4282c223,Sessão 9f08101b-1fd8-4896-a970-259c4282c223,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(9f08101b-1fd8-4896-a970-259c4282c223) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/session: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 9f08101b-1fd8-4896-a970-259c4282c223,Sessão 9f08101b-1fd8-4896-a970-259c4282c223,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(9f08101b-1fd8-4896-a970-259c4282c223) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/session 500 in 1614ms (compile: 31ms, proxy.ts: 54ms, render: 1530ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"9f08101b-1fd8-4896-a970-259c4282c223","role":"user","content":"Sugira os melhores tipos de vidro para projetos arquitetônicos","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ GET /api/webhook-config 200 in 211ms (compile: 39ms, proxy.ts: 33ms, render: 139ms)
+Saved message for session 9f08101b-1fd8-4896-a970-259c4282c223: {
+  id: '9d214481-c36c-4889-a3a6-b16bbed966b8',
+  session_id: '9f08101b-1fd8-4896-a970-259c4282c223',
+  role: 'user',
+  content: 'Sugira os melhores tipos de vidro para projetos arquitetônicos',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:18:32.316Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 325ms (compile: 119ms, proxy.ts: 28ms, render: 178ms)
+ GET /api/webhook-config 200 in 100ms (compile: 12ms, proxy.ts: 65ms, render: 23ms)
+ POST /api/session 200 in 418ms (compile: 72ms, proxy.ts: 108ms, render: 239ms)
+ GET /api/session/e06950ce-074f-41ab-b7f0-13d30f502ef6/messages 200 in 4.7s (compile: 4.4s, proxy.ts: 10ms, render: 282ms)
+ GET /api/session/0b076a8e-b571-4c1f-9631-08878f1d87d3/messages 200 in 1179ms (compile: 587ms, proxy.ts: 68ms, render: 524ms)
+✅ PostgreSQL tables initialized
+ GET /api/session/dates 200 in 844ms (compile: 58ms, proxy.ts: 65ms, render: 721ms)
+ GET /api/session/summary 200 in 9.6s (compile: 60ms, proxy.ts: 54ms, render: 9.5s)
+ ✓ Compiled in 3ms
+ POST /api/webhook-proxy 200 in 2.8s (compile: 1594ms, proxy.ts: 50ms, render: 1201ms)
+ GET / 200 in 1810ms (compile: 317ms, render: 1493ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+ POST /api/session 200 in 446ms (compile: 70ms, proxy.ts: 98ms, render: 278ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+ POST /api/session 200 in 451ms (compile: 270ms, proxy.ts: 51ms, render: 130ms)
+Error saving session via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 67d733eb-0d49-4135-b7ba-2535472bfa06,Sessão 67d733eb-0d49-4135-b7ba-2535472bfa06,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(67d733eb-0d49-4135-b7ba-2535472bfa06) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/session: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 67d733eb-0d49-4135-b7ba-2535472bfa06,Sessão 67d733eb-0d49-4135-b7ba-2535472bfa06,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(67d733eb-0d49-4135-b7ba-2535472bfa06) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/session 500 in 943ms (compile: 35ms, proxy.ts: 27ms, render: 882ms)
+ POST /api/session 200 in 961ms (compile: 27ms, proxy.ts: 19ms, render: 915ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"67d733eb-0d49-4135-b7ba-2535472bfa06","role":"user","content":"Sugira os melhores tipos de vidro para projetos arquitetônicos","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ GET /api/webhook-config 200 in 155ms (compile: 67ms, proxy.ts: 34ms, render: 55ms)
+Saved message for session 67d733eb-0d49-4135-b7ba-2535472bfa06: {
+  id: '9baf9317-40dd-42fd-89fc-d19e1d3f1527',
+  session_id: '67d733eb-0d49-4135-b7ba-2535472bfa06',
+  role: 'user',
+  content: 'Sugira os melhores tipos de vidro para projetos arquitetônicos',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:21:39.600Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 276ms (compile: 50ms, proxy.ts: 33ms, render: 192ms)
+ GET /api/webhook-config 200 in 133ms (compile: 63ms, proxy.ts: 42ms, render: 28ms)
+ POST /api/session 200 in 387ms (compile: 80ms, proxy.ts: 35ms, render: 271ms)
+ POST /api/session 200 in 392ms (compile: 35ms, proxy.ts: 91ms, render: 265ms)
+ POST /api/webhook-proxy 200 in 529ms (compile: 11ms, proxy.ts: 13ms, render: 505ms)
+ GET / 200 in 971ms (compile: 21ms, render: 950ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+ POST /api/session 200 in 118ms (compile: 12ms, proxy.ts: 13ms, render: 92ms)
+ POST /api/session 200 in 147ms (compile: 11ms, proxy.ts: 28ms, render: 108ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+ POST /api/session 200 in 204ms (compile: 40ms, proxy.ts: 41ms, render: 123ms)
+ POST /api/session 200 in 326ms (compile: 69ms, proxy.ts: 40ms, render: 218ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"c514ef18-87f9-49f4-92ac-fda4c8e75ff2","role":"user","content":"Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ GET /api/webhook-config 200 in 559ms (compile: 213ms, proxy.ts: 126ms, render: 221ms)
+ POST /api/session 200 in 616ms (compile: 184ms, proxy.ts: 182ms, render: 250ms)
+Saved message for session c514ef18-87f9-49f4-92ac-fda4c8e75ff2: {
+  id: '7ce29847-688d-4dc9-9a10-bae986339bde',
+  session_id: 'c514ef18-87f9-49f4-92ac-fda4c8e75ff2',
+  role: 'user',
+  content: 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:21:56.076Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 706ms (compile: 198ms, proxy.ts: 123ms, render: 385ms)
+ GET /api/webhook-config 200 in 257ms (compile: 106ms, proxy.ts: 92ms, render: 59ms)
+ POST /api/session 200 in 906ms (compile: 202ms, proxy.ts: 175ms, render: 529ms)
+ POST /api/session 200 in 859ms (compile: 217ms, proxy.ts: 134ms, render: 508ms)
+   Reload env: .env
+ ○ Compiling /_not-found/page ...
+ GET /admin/dashboard 404 in 13.6s (compile: 10.1s, render: 3.5s)
+ GET / 404 in 13.5s (compile: 11.0s, render: 2.4s)
+ GET /admin/dashboard 200 in 1689ms (compile: 516ms, render: 1173ms)
+ GET / 200 in 1102ms (compile: 376ms, render: 726ms)
+ GET / 200 in 525ms (compile: 14ms, render: 512ms)
+ GET /admin/dashboard 200 in 422ms (compile: 18ms, render: 404ms)
+ GET / 200 in 242ms (compile: 12ms, render: 230ms)
+ GET / 200 in 150ms (compile: 8ms, render: 141ms)
+ GET / 200 in 464ms (compile: 14ms, render: 450ms)
+ GET /admin/dashboard 200 in 464ms (compile: 97ms, render: 368ms)
+ GET / 200 in 278ms (compile: 13ms, render: 265ms)
+ GET / 200 in 203ms (compile: 17ms, render: 187ms)
+📨 Broadcasting mensagem: message
+ GET / 200 in 1529ms (compile: 20ms, render: 1509ms)
+ GET /admin/dashboard 200 in 1538ms (compile: 97ms, render: 1441ms)
+ GET / 200 in 1412ms (compile: 16ms, render: 1396ms)
+ GET / 200 in 1797ms (compile: 19ms, render: 1778ms)
+POST /api/message payload: {"sessionId":"0219e404-63d7-410e-8003-ab247231a6f2","role":"user","content":"Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ POST /api/session 200 in 2.6s (compile: 518ms, proxy.ts: 260ms, render: 1801ms)
+Error saving session via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 0219e404-63d7-410e-8003-ab247231a6f2,Sessão 0219e404-63d7-410e-8003-ab247231a6f2,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(0219e404-63d7-410e-8003-ab247231a6f2) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/session: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: 0219e404-63d7-410e-8003-ab247231a6f2,Sessão 0219e404-63d7-410e-8003-ab247231a6f2,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(0219e404-63d7-410e-8003-ab247231a6f2) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/session 500 in 3.4s (compile: 640ms, proxy.ts: 263ms, render: 2.5s)
+✅ PostgreSQL tables initialized
+ GET / 200 in 3.3s (compile: 48ms, render: 3.3s)
+ POST /api/session 200 in 844ms (compile: 137ms, proxy.ts: 470ms, render: 237ms)
+ POST /api/session 200 in 858ms (compile: 177ms, proxy.ts: 477ms, render: 204ms)
+ GET /admin/dashboard 200 in 3.2s (compile: 43ms, render: 3.1s)
+ GET /api/webhook-config 200 in 5.3s (compile: 462ms, proxy.ts: 1488ms, render: 3.4s)
+Saved message for session 0219e404-63d7-410e-8003-ab247231a6f2: {
+  id: '2732f783-b9b1-46b8-9b31-a449862ecaa1',
+  session_id: '0219e404-63d7-410e-8003-ab247231a6f2',
+  role: 'user',
+  content: 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:22:55.424Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 6.1s (compile: 688ms, proxy.ts: 517ms, render: 4.9s)
+ POST /api/session 200 in 3.3s (compile: 284ms, proxy.ts: 2.5s, render: 479ms)
+ GET / 200 in 3.5s (compile: 2.2s, render: 1322ms)
+ GET /api/webhook-config 200 in 216ms (compile: 36ms, proxy.ts: 38ms, render: 141ms)
+ GET /admin/dashboard 200 in 3.6s (compile: 75ms, render: 3.5s)
+ GET / 200 in 603ms (compile: 85ms, render: 518ms)
+ GET / 200 in 479ms (compile: 53ms, render: 426ms)
+ GET / 200 in 1025ms (compile: 39ms, render: 986ms)
+ GET / 200 in 1139ms (compile: 97ms, render: 1043ms)
+ GET / 200 in 1213ms (compile: 27ms, render: 1186ms)
+ GET / 200 in 635ms (compile: 42ms, render: 593ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+🔌 WebSocket upgrade request: {
+  pathname: '/_next/webpack-hmr',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+⚠️  Path não é /ws, ignorando: /_next/webpack-hmr
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+ POST /api/session 200 in 640ms (compile: 157ms, proxy.ts: 283ms, render: 201ms)
+ POST /api/session 200 in 710ms (compile: 312ms, proxy.ts: 228ms, render: 170ms)
+ GET /api/session/dates 200 in 691ms (compile: 486ms, proxy.ts: 112ms, render: 93ms)
+🔌 WebSocket upgrade request: {
+  pathname: '/ws',
+  host: 'localhost:3000',
+  origin: 'http://localhost:3000'
+}
+✅ Aceitando conexão WebSocket em /ws
+✅ Novo cliente WebSocket conectado
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"fb051f27-c88d-4b36-a38a-359ba9c9b370","role":"user","content":"Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ GET /api/webhook-config 200 in 659ms (compile: 211ms, proxy.ts: 243ms, render: 205ms)
+ GET /api/session/summary 200 in 10.5s (compile: 776ms, proxy.ts: 112ms, render: 9.6s)
+ POST /api/session 200 in 8.0s (compile: 374ms, proxy.ts: 183ms, render: 7.4s)
+Error saving session via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão 55,,
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/session: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão 55,,
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/session 500 in 8.6s (compile: 259ms, proxy.ts: 178ms, render: 8.1s)
+Error saving message via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, default, default, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão fb051f27-c88d-4b36-a38a-359ba9c9b370
+    at async saveMessage (file:/srv/sites/ubvaia/lib/session-api.ts:52:7)
+    at async POST (file:/srv/sites/ubvaia/app/api/message/route.ts:13:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  50 |     const existing = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  51 |     if (existing.length === 0) {
+> 52 |       await db.insert(sessions).values({ id: sessionId, name: `Sessão ${sessionId}` });
+     |       ^
+  53 |     }
+  54 |
+  55 |     await db.insert(messages).values({ {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, default, default, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveMessage (file:/srv/sites/ubvaia/lib/session-api.ts:52:7)
+      at async POST (file:/srv/sites/ubvaia/app/api/message/route.ts:13:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    50 |     const existing = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+    51 |     if (existing.length === 0) {
+  > 52 |       await db.insert(sessions).values({ id: sessionId, name: `Sessão ${sessionId}` });
+       |       ^
+    53 |     }
+    54 |
+    55 |     await db.insert(messages).values({ {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/message: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, default, default, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão fb051f27-c88d-4b36-a38a-359ba9c9b370
+    at async saveMessage (file:/srv/sites/ubvaia/lib/session-api.ts:52:7)
+    at async POST (file:/srv/sites/ubvaia/app/api/message/route.ts:13:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  50 |     const existing = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  51 |     if (existing.length === 0) {
+> 52 |       await db.insert(sessions).values({ id: sessionId, name: `Sessão ${sessionId}` });
+     |       ^
+  53 |     }
+  54 |
+  55 |     await db.insert(messages).values({ {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, default, default, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveMessage (file:/srv/sites/ubvaia/lib/session-api.ts:52:7)
+      at async POST (file:/srv/sites/ubvaia/app/api/message/route.ts:13:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    50 |     const existing = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+    51 |     if (existing.length === 0) {
+  > 52 |       await db.insert(sessions).values({ id: sessionId, name: `Sessão ${sessionId}` });
+       |       ^
+    53 |     }
+    54 |
+    55 |     await db.insert(messages).values({ {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/message 500 in 9.1s (compile: 211ms, proxy.ts: 327ms, render: 8.6s)
+Error saving session via Drizzle: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão fb051f27-c88d-4b36-a38a-359ba9c9b370,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+Error in /api/session: Error: Failed query: insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)
+params: fb051f27-c88d-4b36-a38a-359ba9c9b370,Sessão fb051f27-c88d-4b36-a38a-359ba9c9b370,Rogger,41991747318
+    at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+    at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  86 |     if (existing.length === 0) {
+  87 |       try {
+> 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+     |         ^
+  89 |       } catch (insertErr: any) {
+  90 |         // Handle duplicate key by updating instead
+  91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+  query: 'insert into "sessions" ("id", "name", "nome_completo", "remote_jid", "created_at") values ($1, $2, $3, $4, default)',
+  params: [Array],
+  [cause]: error: duplicate key value violates unique constraint "sessions_pkey"
+      at async saveSession (file:/srv/sites/ubvaia/lib/session-api.ts:88:9)
+      at async POST (file:/srv/sites/ubvaia/app/api/session/route.ts:25:5)
+      at async Server.<anonymous> (server-custom.ts:36:13)
+    86 |     if (existing.length === 0) {
+    87 |       try {
+  > 88 |         await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+       |         ^
+    89 |       } catch (insertErr: any) {
+    90 |         // Handle duplicate key by updating instead
+    91 |         if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') { {
+    length: 224,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (id)=(fb051f27-c88d-4b36-a38a-359ba9c9b370) already exists.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'sessions',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'sessions_pkey',
+    file: 'nbtinsert.c',
+    line: '666',
+    routine: '_bt_check_unique'
+  }
+}
+ POST /api/session 500 in 8.3s (compile: 288ms, proxy.ts: 251ms, render: 7.7s)
+ POST /api/session 200 in 7.1s (compile: 157ms, proxy.ts: 214ms, render: 6.7s)
+ GET /api/webhook-config 200 in 122ms (compile: 67ms, proxy.ts: 23ms, render: 33ms)
+ POST /api/session 200 in 211ms (compile: 46ms, proxy.ts: 83ms, render: 82ms)
+ ✓ Compiled in 8.9s
+   Reload env: .env
+ ✓ Compiled in 1185ms
+ GET / 200 in 1616ms (compile: 332ms, render: 1283ms)
+ GET /admin/dashboard 200 in 975ms (compile: 746ms, render: 229ms)
+ GET / 200 in 90ms (compile: 10ms, render: 79ms)
+ GET / 200 in 280ms (compile: 10ms, render: 270ms)
+ GET /admin/dashboard 200 in 213ms (compile: 14ms, render: 199ms)
+ GET / 200 in 212ms (compile: 15ms, render: 198ms)
+ GET / 200 in 300ms (compile: 15ms, render: 285ms)
+ GET / 200 in 304ms (compile: 134ms, render: 170ms)
+ GET /admin/dashboard 200 in 381ms (compile: 45ms, render: 336ms)
+ GET / 200 in 168ms (compile: 10ms, render: 157ms)
+ GET / 200 in 88ms (compile: 9ms, render: 79ms)
+ GET / 200 in 292ms (compile: 27ms, render: 265ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"8df1514b-7047-4577-92c6-fefc86bdb80f","role":"user","content":"Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ POST /api/session 200 in 2.3s (compile: 420ms, proxy.ts: 446ms, render: 1426ms)
+✅ PostgreSQL tables initialized
+ GET /api/webhook-config 200 in 1330ms (compile: 568ms, proxy.ts: 245ms, render: 517ms)
+ POST /api/session 200 in 2.4s (compile: 666ms, proxy.ts: 442ms, render: 1296ms)
+ POST /api/session 200 in 1363ms (compile: 572ms, proxy.ts: 253ms, render: 537ms)
+Saved message for session 8df1514b-7047-4577-92c6-fefc86bdb80f: {
+  id: 'cfc1bcac-d3e6-4ba7-b3c0-1ce666706485',
+  session_id: '8df1514b-7047-4577-92c6-fefc86bdb80f',
+  role: 'user',
+  content: 'Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:24:00.063Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 1542ms (compile: 411ms, proxy.ts: 242ms, render: 889ms)
+ POST /api/session 200 in 257ms (compile: 41ms, proxy.ts: 107ms, render: 109ms)
+ GET /api/webhook-config 200 in 158ms (compile: 88ms, proxy.ts: 33ms, render: 37ms)
+ POST /api/session 200 in 650ms (compile: 48ms, proxy.ts: 98ms, render: 504ms)
+ GET /api/webhook-config 200 in 225ms (compile: 31ms, proxy.ts: 52ms, render: 142ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"8df1514b-7047-4577-92c6-fefc86bdb80f","role":"user","content":"Áudio enviado","contentType":"audio","audioUrl":"blob:http://localhost:3000/fc2c8ea0-aba8-4cd6-b2a1-71435799aa0f","nome_completo":"Rogger","remote_jid":"41991747318"}
+Saved message for session 8df1514b-7047-4577-92c6-fefc86bdb80f: {
+  id: '475a9276-734c-43d5-ae54-3e612e006e58',
+  session_id: '8df1514b-7047-4577-92c6-fefc86bdb80f',
+  role: 'user',
+  content: 'Áudio enviado',
+  content_type: 'audio',
+  image_url: null,
+  audio_url: 'blob:http://localhost:3000/fc2c8ea0-aba8-4cd6-b2a1-71435799aa0f',
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:24:16.669Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 297ms (compile: 30ms, proxy.ts: 31ms, render: 236ms)
+ POST /api/session 200 in 503ms (compile: 141ms, proxy.ts: 72ms, render: 290ms)
+ GET /api/webhook-config 200 in 625ms (compile: 212ms, proxy.ts: 114ms, render: 299ms)
+ POST /api/session 200 in 1039ms (compile: 238ms, proxy.ts: 176ms, render: 625ms)
+ POST /api/session 200 in 1728ms (compile: 432ms, proxy.ts: 221ms, render: 1075ms)
+Timeout ao comunicar com n8n: Error [AbortError]: This operation was aborted
+    at async POST (file:/srv/sites/ubvaia/app/api/n8n-proxy/route.ts:44:13)
+    at async Server.<anonymous> (server-custom.ts:36:13)
+  42 |     let res;
+  43 |     try {
+> 44 |       res = await fetch(webhookUrl, {
+     |             ^
+  45 |         method: 'POST',
+  46 |         headers: {
+  47 |           'Content-Type': 'application/json', {
+  code: 20,
+  INDEX_SIZE_ERR: 1,
+  DOMSTRING_SIZE_ERR: 2,
+  HIERARCHY_REQUEST_ERR: 3,
+  WRONG_DOCUMENT_ERR: 4,
+  INVALID_CHARACTER_ERR: 5,
+  NO_DATA_ALLOWED_ERR: 6,
+  NO_MODIFICATION_ALLOWED_ERR: 7,
+  NOT_FOUND_ERR: 8,
+  NOT_SUPPORTED_ERR: 9,
+  INUSE_ATTRIBUTE_ERR: 10,
+  INVALID_STATE_ERR: 11,
+  SYNTAX_ERR: 12,
+  INVALID_MODIFICATION_ERR: 13,
+  NAMESPACE_ERR: 14,
+  INVALID_ACCESS_ERR: 15,
+  VALIDATION_ERR: 16,
+  TYPE_MISMATCH_ERR: 17,
+  SECURITY_ERR: 18,
+  NETWORK_ERR: 19,
+  ABORT_ERR: 20,
+  URL_MISMATCH_ERR: 21,
+  QUOTA_EXCEEDED_ERR: 22,
+  TIMEOUT_ERR: 23,
+  INVALID_NODE_TYPE_ERR: 24,
+  DATA_CLONE_ERR: 25
+}
+ POST /api/n8n-proxy 504 in 6.1s (compile: 2.7s, proxy.ts: 218ms, render: 3.2s)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"8df1514b-7047-4577-92c6-fefc86bdb80f","role":"assistant","content":"Timeout ao comunicar com n8n.","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+ GET /api/webhook-config 200 in 95ms (compile: 36ms, proxy.ts: 21ms, render: 38ms)
+Saved message for session 8df1514b-7047-4577-92c6-fefc86bdb80f: {
+  id: '1a210ec5-af9a-4a9f-bbfc-25cd4157e7a1',
+  session_id: '8df1514b-7047-4577-92c6-fefc86bdb80f',
+  role: 'assistant',
+  content: 'Timeout ao comunicar com n8n.',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:24:23.382Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 258ms (compile: 17ms, proxy.ts: 18ms, render: 222ms)
+ POST /api/session 200 in 184ms (compile: 33ms, proxy.ts: 25ms, render: 126ms)
+ POST /api/session 200 in 254ms (compile: 44ms, proxy.ts: 24ms, render: 186ms)
+ POST /api/session 200 in 192ms (compile: 28ms, proxy.ts: 23ms, render: 140ms)
+ GET /api/webhook-config 200 in 93ms (compile: 16ms, proxy.ts: 13ms, render: 63ms)
+ GET /api/webhook-config 200 in 53ms (compile: 24ms, proxy.ts: 10ms, render: 19ms)
+ POST /api/webhook-config 200 in 206ms (compile: 47ms, proxy.ts: 30ms, render: 129ms)
+ GET /api/webhook-config 200 in 112ms (compile: 37ms, proxy.ts: 25ms, render: 50ms)
+ POST /api/webhook-config 200 in 145ms (compile: 48ms, proxy.ts: 28ms, render: 69ms)
+ GET /api/session/e39060de-e4f9-43b2-9a06-ebfb0b7a04ad/messages 200 in 911ms (compile: 626ms, proxy.ts: 14ms, render: 270ms)
+ GET /api/session/02ec3979-ace2-4fb6-89d8-80ed988f0b94/messages 200 in 252ms (compile: 102ms, proxy.ts: 37ms, render: 113ms)
+ GET /api/session/9f9e3913-02d0-4d13-8487-de7109b545d3/messages 200 in 320ms (compile: 71ms, proxy.ts: 36ms, render: 213ms)
+✅ PostgreSQL tables initialized
+ POST /api/session 200 in 220ms (compile: 27ms, proxy.ts: 15ms, render: 178ms)
+ POST /api/session 200 in 144ms (compile: 19ms, proxy.ts: 23ms, render: 103ms)
+📨 Broadcasting mensagem: message
+POST /api/message payload: {"sessionId":"6fa464f1-a96d-439e-a15b-a33b02527996","role":"user","content":"Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil","contentType":"text","nome_completo":"Rogger","remote_jid":"41991747318"}
+Saved message for session 6fa464f1-a96d-439e-a15b-a33b02527996: {
+  id: '9a5672f7-0d7b-4ecf-b001-3be77b3b7671',
+  session_id: '6fa464f1-a96d-439e-a15b-a33b02527996',
+  role: 'user',
+  content: 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil',
+  content_type: 'text',
+  image_url: null,
+  audio_url: null,
+  audio_base64: null,
+  mime_type: null,
+  created_at: 2025-11-28T13:26:21.290Z,
+  imageUrl: undefined
+}
+ POST /api/message 200 in 519ms (compile: 120ms, proxy.ts: 77ms, render: 322ms)
+ POST /api/session 200 in 276ms (compile: 102ms, proxy.ts: 62ms, render: 112ms)
+ GET /api/webhook-config 200 in 736ms (compile: 159ms, proxy.ts: 85ms, render: 491ms)
+ POST /api/session 200 in 714ms (compile: 212ms, proxy.ts: 87ms, render: 415ms)
+ POST /api/session 200 in 773ms (compile: 182ms, proxy.ts: 73ms, render: 519ms)
+ GET /api/webhook-config 200 in 108ms (compile: 46ms, proxy.ts: 21ms, render: 42ms)
+ ✓ Compiled in 5.7s
+ GET /api/session/e39060de-e4f9-43b2-9a06-ebfb0b7a04ad/messages 200 in 1027ms (compile: 582ms, proxy.ts: 110ms, render: 335ms)
+ GET /api/session/0219e404-63d7-410e-8003-ab247231a6f2/messages 200 in 237ms (compile: 122ms, proxy.ts: 42ms, render: 73ms)
+✅ PostgreSQL tables initialized
+ GET /api/session/a09f3a0c-dd11-4538-9400-27a3c1db41c8/messages 200 in 632ms (compile: 133ms, proxy.ts: 14ms, render: 486ms)
+✅ PostgreSQL tables initialized
