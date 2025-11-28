@@ -406,14 +406,14 @@ export default function AdminDashboard() {
   const avgMessagesPerSession = totalSessions > 0 ? Math.round(totalMessages / totalSessions) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       {/* Header */}
-      <header className="border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-border/50 bg-card/80 backdrop-blur-xl shadow-lg shadow-primary/5">
+        <div className="container mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="rounded-xl bg-primary p-3 shadow-md">
+            <div className="rounded-xl bg-gradient-to-br from-primary via-primary to-primary/80 p-3 shadow-lg transition-all hover:shadow-primary/20 hover:shadow-2xl group">
               <svg
-                className="w-6 h-6 text-primary-foreground"
+                className="w-6 h-6 text-primary-foreground group-hover:scale-110 transition-transform"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -427,15 +427,17 @@ export default function AdminDashboard() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
-              <p className="text-sm text-slate-600 dark:text-zinc-400 flex items-center gap-2">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                Dashboard Admin
+              </h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <span className="inline-flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                   </svg>
                   {totalSessions} sessões
                 </span>
-                <span className="text-slate-400 dark:text-zinc-600">•</span>
+                <span className="text-muted-foreground/50">•</span>
                 <span className="inline-flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
@@ -445,10 +447,10 @@ export default function AdminDashboard() {
               </p>
             </div>
             {/* Indicador de conexão WebSocket */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm ${
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-all ${
               isConnected
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 shadow-green-500/10'
+                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 shadow-red-500/10'
               }`}>
               <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                 }`}></span>
@@ -472,7 +474,7 @@ export default function AdminDashboard() {
                 }
               }}
               disabled={loadingRef.current}
-              className="p-2 rounded-lg hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-accent/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
               aria-label="Atualizar sessões"
               title="Atualizar sessões manualmente"
             >
@@ -642,14 +644,14 @@ export default function AdminDashboard() {
       </header>
 
       {/* Metrics Cards Section */}
-      <div className="container mx-auto px-6 py-6">
+      <div className="container mx-auto px-6 py-6 pt-24">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Sessions Card */}
-          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border-border bg-card shadow-lg hover:shadow-2xl hover:shadow-primary/10 transition-all hover:-translate-y-1 group">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Sessões</CardTitle>
-                <div className="rounded-lg bg-primary/10 p-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">Total de Sessões</CardTitle>
+                <div className="rounded-lg bg-primary/10 p-2 group-hover:bg-primary/20 group-hover:scale-110 transition-all">
                   <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                   </svg>
@@ -657,17 +659,17 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{totalSessions}</div>
+              <div className="text-3xl font-bold text-foreground group-hover:scale-105 transition-transform">{totalSessions}</div>
               <p className="text-xs text-muted-foreground mt-1">Conversas registradas</p>
             </CardContent>
           </Card>
 
           {/* Today Sessions Card */}
-          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border-border bg-card shadow-lg hover:shadow-2xl hover:shadow-green-500/10 transition-all hover:-translate-y-1 group">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Sessões Hoje</CardTitle>
-                <div className="rounded-lg bg-green-500/10 p-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">Sessões Hoje</CardTitle>
+                <div className="rounded-lg bg-green-500/10 p-2 group-hover:bg-green-500/20 group-hover:scale-110 transition-all">
                   <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
@@ -675,17 +677,17 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{todaySessions}</div>
+              <div className="text-3xl font-bold text-foreground group-hover:scale-105 transition-transform">{todaySessions}</div>
               <p className="text-xs text-muted-foreground mt-1">Ativas nas últimas 24h</p>
             </CardContent>
           </Card>
 
           {/* Total Messages Card */}
-          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border-border bg-card shadow-lg hover:shadow-2xl hover:shadow-purple-500/10 transition-all hover:-translate-y-1 group">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Mensagens</CardTitle>
-                <div className="rounded-lg bg-purple-500/10 p-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Total de Mensagens</CardTitle>
+                <div className="rounded-lg bg-purple-500/10 p-2 group-hover:bg-purple-500/20 group-hover:scale-110 transition-all">
                   <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                   </svg>
@@ -693,17 +695,17 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{totalMessages}</div>
+              <div className="text-3xl font-bold text-foreground group-hover:scale-105 transition-transform">{totalMessages}</div>
               <p className="text-xs text-muted-foreground mt-1">Trocadas com o bot</p>
             </CardContent>
           </Card>
 
           {/* Average Messages Card */}
-          <Card className="border-border bg-card shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border-border bg-card shadow-lg hover:shadow-2xl hover:shadow-orange-500/10 transition-all hover:-translate-y-1 group">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Média por Sessão</CardTitle>
-                <div className="rounded-lg bg-orange-500/10 p-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">Média por Sessão</CardTitle>
+                <div className="rounded-lg bg-orange-500/10 p-2 group-hover:bg-orange-500/20 group-hover:scale-110 transition-all">
                   <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                   </svg>
@@ -711,7 +713,7 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{avgMessagesPerSession}</div>
+              <div className="text-3xl font-bold text-foreground group-hover:scale-105 transition-transform">{avgMessagesPerSession}</div>
               <p className="text-xs text-muted-foreground mt-1">Mensagens por conversa</p>
             </CardContent>
           </Card>

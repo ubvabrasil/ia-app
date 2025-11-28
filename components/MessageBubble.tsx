@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { Message } from '@/lib/types';
 
 // Formatação avançada do texto da assistente
@@ -127,7 +127,6 @@ import { cn } from '@/lib/utils';
 import { parseDbTimestamp, formatToSaoPaulo } from '@/server/datetime';
 import Image from 'next/image';
 import Avatar from './Avatar';
-import { useMemo } from 'react';
 import { FiCornerUpLeft } from 'react-icons/fi';
 
 interface MessageBubbleProps {
@@ -136,7 +135,7 @@ interface MessageBubbleProps {
   userName?: string;
 }
 
-export function MessageBubble({ message, onReply, userName }: MessageBubbleProps) {
+function MessageBubbleComponent({ message, onReply, userName }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
 
