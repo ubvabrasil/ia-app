@@ -5,15 +5,15 @@ import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = process.env.HOSTNAME || 'localhost';
+const hostname = '0.0.0.0'; // Accept connections from any host
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Preparar app Next.js - DISABLE Turbopack to avoid crashes
+// Preparar app Next.js com Turbopack para dev rápido
 const app = next({ 
   dev, 
   hostname, 
   port,
-  turbo: false, // Disable Turbopack, use stable webpack
+  turbo: dev, // Enable Turbopack in development for 10x faster startup
 });
 const handle = app.getRequestHandler();
 
@@ -53,18 +53,32 @@ app.prepare().then(() => {
 
   // Upgrade para WebSocket apenas no path /ws
   server.on('upgrade', (request, socket, head) => {
-    // Use WHATWG URL API instead of url.parse()
-    const url = new URL(request.url || '/', `http://${request.headers.host}`);
-    const pathname = url.pathname;
-    
-    // Apenas interceptar nosso WebSocket em /ws
-    if (pathname === '/ws') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
+    try {
+      // Use WHATWG URL API instead of url.parse()
+      const url = new URL(request.url || '/', `http://${request.headers.host}`);
+      const pathname = url.pathname;
+      
+      console.log('🔌 WebSocket upgrade request:', {
+        pathname,
+        host: request.headers.host,
+        origin: request.headers.origin,
       });
+      
+      // Apenas interceptar nosso WebSocket em /ws
+      if (pathname === '/ws') {
+        console.log('✅ Aceitando conexão WebSocket em /ws');
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          wss.emit('connection', ws, request);
+        });
+      } else {
+        console.log('⚠️  Path não é /ws, ignorando:', pathname);
+      }
+      // Para outros paths (incluindo HMR do Next.js), não fazer nada
+      // O Next.js tem seus próprios handlers de upgrade
+    } catch (error) {
+      console.error('❌ Erro no upgrade WebSocket:', error);
+      socket.destroy();
     }
-    // Para outros paths (incluindo HMR do Next.js), não fazer nada
-    // O Next.js tem seus próprios handlers de upgrade
   });
 
   // Armazenar clientes conectados

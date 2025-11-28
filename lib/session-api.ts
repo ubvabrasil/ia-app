@@ -107,6 +107,38 @@ export async function getAllSessions(): Promise<any[]> {
   return await db.select().from(sessions).orderBy(desc(sessions.created_at));
 }
 
+// Retorna resumo otimizado das sessões (apenas contagem e última atividade)
+export async function getSessionsSummary(): Promise<any[]> {
+  const sess = await db.select().from(sessions).orderBy(desc(sessions.created_at));
+  
+  const result = await Promise.all(sess.map(async (s: any) => {
+    // Buscar apenas a última mensagem para pegar a última atividade
+    const lastMsgQuery = await db.select()
+      .from(messages)
+      .where(eq(messages.session_id, s.id))
+      .orderBy(desc(messages.created_at))
+      .limit(1);
+    
+    const lastMsg = lastMsgQuery.length > 0 ? lastMsgQuery[0] : null;
+    
+    // Contar total de mensagens
+    const msgCount = await db.select()
+      .from(messages)
+      .where(eq(messages.session_id, s.id));
+    
+    return {
+      id: s.id,
+      name: s.name,
+      nome_completo: s.nome_completo,
+      remote_jid: s.remote_jid,
+      message_count: msgCount.length,
+      last_activity: lastMsg?.created_at || s.created_at,
+    };
+  }));
+  
+  return result;
+}
+
 // Config persistence (store settings like webhookUrl, authToken, chatName)
 export async function saveConfig(key: string, value: any): Promise<void> {
   try {

@@ -22,15 +22,10 @@ function getWebSocketUrl(): string {
   
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.hostname;
-  const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
   
-  // Se estiver rodando em produção com domínio, usar o mesmo host
-  if (host !== 'localhost' && host !== '127.0.0.1') {
-    return `${protocol}//${host}:3000/ws`;
-  }
-  
-  // Para localhost, usar a porta correta
-  return `ws://${host}:3000/ws`;
+  // Sempre usar a porta 3000 para WebSocket (servidor custom)
+  // Isso funciona tanto para localhost quanto para IPs da rede
+  return `${protocol}//${host}:3000/ws`;
 }
 
 const WS_URL = getWebSocketUrl();
@@ -65,9 +60,12 @@ export function useWebSocket(onMessage?: (message: WSMessage) => void): UseWebSo
 
     try {
       isConnecting.current = true;
-      console.log('🔌 Conectando ao WebSocket:', WS_URL);
+      const wsUrl = getWebSocketUrl();
+      console.log('🔌 Conectando ao WebSocket:', wsUrl);
+      console.log('📍 Origem:', window.location.origin);
+      console.log('📍 Host:', window.location.hostname);
       
-      ws.current = new WebSocket(WS_URL);
+      ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
         console.log('✅ WebSocket conectado');
