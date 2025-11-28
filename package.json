@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node dev-fast.js",
+    "dev:turbo": "next dev --turbopack -p 3000 -H 0.0.0.0",
     "ws": "ts-node --project tsconfig.server.json server-websocket.ts",
-    "build": "next build",
+    "build": "next build --turbopack",
     "check": "npx tsc --noEmit && npx eslint . --ext .ts,.tsx,.js,.jsx",
     "start": "ts-node --project tsconfig.server.json server-custom.ts",
     "start:old": "next start",

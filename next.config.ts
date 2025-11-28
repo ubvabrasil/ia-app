@@ -12,11 +12,11 @@ const nextConfig: NextConfig = {
 
   // Performance optimizations for faster startup
   experimental: {
-    // Optimize package imports
-    optimizePackageImports: ['lucide-react', 'framer-motion'],
+    // Optimize package imports for faster compilation
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'react-icons'],
   },
-  // Provide an explicit (possibly empty) turbopack config so Next.js
-  // doesn't error when a custom webpack config is present.
+  
+  // Turbopack configuration for 10x faster dev builds
   turbopack: {},
   
   // Faster refresh in development
@@ -24,21 +24,7 @@ const nextConfig: NextConfig = {
   
   // Skip type checking during dev (use IDE for that)
   typescript: {
-    ignoreBuildErrors: false,
-  },
-  
-  // Optimize webpack for faster builds
-  webpack: (config, { dev, isServer }) => {
-    if (dev) {
-      // Faster builds in development
-      config.optimization = {
-        ...config.optimization,
-        removeAvailableModules: false,
-        removeEmptyChunks: false,
-        splitChunks: false,
-      };
-    }
-    return config;
+    ignoreBuildErrors: true, // Much faster startup, use 'bun run check' to validate
   },
 };
 

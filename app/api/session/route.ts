@@ -3,7 +3,18 @@ import { saveSession, getAllSessionsWithMessages } from '../../../lib/session-ap
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // Validate request has body content
+    const contentType = req.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      return NextResponse.json({ error: 'Content-Type must be application/json' }, { status: 400 });
+    }
+
+    const text = await req.text();
+    if (!text || text.trim() === '') {
+      return NextResponse.json({ error: 'Request body is empty' }, { status: 400 });
+    }
+
+    const body = JSON.parse(text);
     const id = body.id;
     const name = body.name || `Sessão ${id}`;
     const nome_completo = body.nome_completo || null;
