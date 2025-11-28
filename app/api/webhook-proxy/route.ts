@@ -52,13 +52,26 @@ export async function POST(req: NextRequest) {
   if (payload?.fileBase64) fileBase64 = payload.fileBase64;
   else if (payload?.media) fileBase64 = String(payload.media);
 
-  const messageText = payload?.message ?? payload?.Message ?? '';
+  const messageText = payload?.message ?? payload?.Message ?? payload?.content ?? '';
   const eventValue = event ?? payload?.Event ?? null;
-  const groqApi = payload?.groq_api ?? null;
+  const groqApi = payload?.groq_api ?? process.env.GROQ_API_KEY ?? null;
   const sessionIdVal = payload?.session_id ?? payload?.sessionId ?? null;
+  
+  // Determine message type from contentType or infer from payload
+  let messageType = 'text';
+  if (payload?.contentType) {
+    messageType = payload.contentType;
+  } else if (payload?.audioUrl || payload?.audioBase64 || payload?.mimeType?.includes('audio')) {
+    messageType = 'audio';
+  } else if (payload?.imageUrl || payload?.fileType?.startsWith('image/')) {
+    messageType = 'image';
+  } else if (payload?.fileName || payload?.file) {
+    messageType = 'file';
+  }
 
   const forwardBody = {
-    event,
+    event: eventValue || 'SEND_MESSAGE',
+    messageType,
     webhookUrl: url,
     headers: headersObj,
     params: paramsObj,
@@ -66,16 +79,26 @@ export async function POST(req: NextRequest) {
     body: bodyOriginal,
     remoteId,
     nome,
+    timestamp: new Date().toISOString(),
     // include everything the caller sent as a convenience (but we also surface the above fields)
     payload,
-    // items array as requested (1 item)
+    // items array as requested (1 item) with ALL available info
     items: [
       {
         Message: messageText,
         Event: eventValue,
+        messageType,
         groq_api: groqApi,
         session_id: sessionIdVal,
         fileBase64,
+        fileName: payload?.fileName ?? null,
+        fileType: payload?.fileType ?? payload?.mimeType ?? null,
+        audioUrl: payload?.audioUrl ?? null,
+        imageUrl: payload?.imageUrl ?? null,
+        contentType: payload?.contentType ?? messageType,
+        role: payload?.role ?? 'user',
+        nome_completo: payload?.nome_completo ?? nome,
+        remote_jid: payload?.remote_jid ?? remoteId,
       },
     ],
   };

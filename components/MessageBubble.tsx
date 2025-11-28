@@ -1,4 +1,8 @@
 "use client";
+
+import { memo, useMemo } from 'react';
+import { Message } from '@/lib/types';
+
 // Formatação avançada do texto da assistente
 function formatAssistantText(text: string) {
   if (!text) return '';
@@ -378,3 +382,13 @@ export function MessageBubble({ message, onReply, userName }: MessageBubbleProps
     </motion.div>
   );
 }
+
+// Export memoizado com comparação otimizada
+export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps) => {
+  // Otimização: apenas re-renderizar se a mensagem mudou
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.onReply === nextProps.onReply
+  );
+});

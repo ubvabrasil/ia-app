@@ -84,7 +84,20 @@ export async function saveSession({ id, name, nome_completo, remote_jid }: Sessi
   try {
     const existing = await db.select().from(sessions).where(eq(sessions.id, id));
     if (existing.length === 0) {
-      await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+      try {
+        await db.insert(sessions).values({ id, name: name || null, nome_completo: nome_completo || null, remote_jid: remote_jid || null });
+      } catch (insertErr: any) {
+        // Handle duplicate key by updating instead
+        if (insertErr?.message?.includes('duplicate') || insertErr?.code === '23505') {
+          await db.update(sessions).set({
+            name: name || null,
+            nome_completo: nome_completo || null,
+            remote_jid: remote_jid || null,
+          }).where(eq(sessions.id, id));
+        } else {
+          throw insertErr;
+        }
+      }
     } else {
       await db.update(sessions).set({
         name: name || existing[0].name,

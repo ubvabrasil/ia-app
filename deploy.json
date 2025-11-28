@@ -3,7 +3,7 @@
     {
       "name": "Backup",
       "icon": "cloud-upload",
-      "command": "DATE=$(date +%F); DATETIME=$(date +%F_%H-%M-%S); mkdir -p /srv/backups/$DATE && zip -r \"/srv/backups/$DATE/BKP_${DATETIME}.zip\" /srv/sites/ubvaia"
+      "command": "DATE=$(date +%F); DATETIME=$(date +%F_%H-%M-%S); mkdir -p /srv/backups/$DATE && 7z a \"/srv/backups/$DATE/BKP_${DATETIME}.7z\" /srv/sites/ubvaia -xr!node_modules"
     },
     {
       "name": "Start",
