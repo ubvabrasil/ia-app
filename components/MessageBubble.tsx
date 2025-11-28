@@ -138,11 +138,6 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
 
-  // Efeito GIF sutil para balão da assistente
-  const assistantBubbleClass = isAssistant
-    ? 'bg-gradient-to-br from-[#f7faff] via-[#eaf6ff] to-[#e0f0ff] animate-bubble-gif'
-    : 'bg-card text-card-foreground rounded-bl-sm';
-
   // Centralized date parsing/formatting for correct TZ
   const dateStr = formatToSaoPaulo(parseDbTimestamp(message.timestamp));
 

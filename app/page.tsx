@@ -3,14 +3,13 @@
 import { useChatStore } from '@/lib/store';
 import { Chat } from '@/components/Chat';
 import { SettingsModal } from '@/components/SettingsModal';
-import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { useEffect, useState } from 'react';
-import { FaBroom } from 'react-icons/fa';
+import { useState } from 'react';
+import Image from 'next/image';
 
 export default function Home() {
-  const { config, theme, toggleTheme, messages } = useChatStore();
-  const [showHistory, setShowHistory] = useState(false);
+  const { config, messages } = useChatStore();
+  const [showHistory] = useState(false);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
@@ -21,10 +20,13 @@ export default function Home() {
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
             <div className="relative w-16 h-16 flex items-center justify-center">
-              <img 
+              <Image 
                 src="/logo.png" 
                 alt="Logo" 
-                className="w-14 h-14 object-contain filter drop-shadow-lg group-hover:scale-110 transition-all duration-500 brightness-110 contrast-110"
+                width={56}
+                height={56}
+                className="object-contain filter drop-shadow-lg group-hover:scale-110 transition-all duration-500 brightness-110 contrast-110"
+                priority
               />
             </div>
           </div>
