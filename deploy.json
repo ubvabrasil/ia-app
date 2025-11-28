@@ -1,0 +1,14 @@
+{
+    "deploy": [
+    {
+      "name": "Backup",
+      "icon": "cloud-upload",
+      "command": "DATE=$(date +%F); DATETIME=$(date +%F_%H-%M-%S); mkdir -p /srv/backups/$DATE && zip -r \"/srv/backups/$DATE/BKP_${DATETIME}.zip\" /srv/sites/ubvaia"
+    },
+    {
+      "name": "Start",
+      "icon": "play",
+      "command": "bun run dev:turbo"
+    }
+  ]
+}
