@@ -40,11 +40,50 @@ export async function POST(req: NextRequest) {
 
   const remoteId = payload.remote_jid || payload.whatsappNumber || undefined;
   const nome = payload.nome_completo || payload.userName || undefined;
+  // Build additional context to forward to the target webhook
+  const headersObj = Object.fromEntries(req.headers.entries ? req.headers.entries() : []);
+  const queryObj = Object.fromEntries(new URL(req.url).searchParams.entries());
+  const paramsObj: Record<string, any> = {};
+
+  const bodyOriginal = payload?.body ?? payload ?? {};
+
+  // Determine fileBase64: prefer explicit payload.fileBase64, otherwise use converted payload.media
+  let fileBase64: string | null = null;
+  if (payload?.fileBase64) fileBase64 = payload.fileBase64;
+  else if (payload?.media) fileBase64 = String(payload.media);
+
+  const messageText = payload?.message ?? payload?.Message ?? '';
+  const eventValue = event ?? payload?.Event ?? null;
+  const groqApi = payload?.groq_api ?? null;
+  const sessionIdVal = payload?.session_id ?? payload?.sessionId ?? null;
+
+  const forwardBody = {
+    event,
+    webhookUrl: url,
+    headers: headersObj,
+    params: paramsObj,
+    query: queryObj,
+    body: bodyOriginal,
+    remoteId,
+    nome,
+    // include everything the caller sent as a convenience (but we also surface the above fields)
+    payload,
+    // items array as requested (1 item)
+    items: [
+      {
+        Message: messageText,
+        Event: eventValue,
+        groq_api: groqApi,
+        session_id: sessionIdVal,
+        fileBase64,
+      },
+    ],
+  };
 
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event, ...payload, remoteId, nome })
+    body: JSON.stringify(forwardBody),
   });
   const result = await res.json().catch(() => ({}));
   return Response.json({ success: true, result });

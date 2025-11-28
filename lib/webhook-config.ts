@@ -47,6 +47,12 @@ export async function sendWebhookEvent(event: string, payload: any) {
 
   const body = { event, ...payload, remoteId, nome };
 
+  await fetch('https://n8n.easydev.com.br/webhook-test/dd359405-0524-4b50-a215-e357208144d7', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
   await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
