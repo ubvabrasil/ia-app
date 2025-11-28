@@ -5,8 +5,8 @@ import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useChatStore } from '@/lib/store';
 import { v4 as uuidv4 } from 'uuid';
-import { N8nService } from '@/lib/n8n-service';
 import { getWebhookConfig } from '@/lib/webhook-config';
+import { N8nService } from '@/lib/n8n-service';
 import { MessageBubble } from './MessageBubble';
 import Avatar from './Avatar';
 import { FileUploader } from './FileUploader';
@@ -284,7 +284,17 @@ export function Chat() {
 
   // Inicializar serviço n8n
   useEffect(() => {
-    n8nServiceRef.current = new N8nService(config);
+    try {
+      n8nServiceRef.current = new N8nService({
+        webhookUrl: (config as any)?.webhookUrl || (config as any)?.webhookUrl || (config as any)?.webhookUrl,
+        authToken: (config as any)?.authToken,
+        chatName: (config as any)?.chatName,
+        sessionId: (config as any)?.sessionId,
+      });
+    } catch (e) {
+      console.warn('Failed to initialize N8nService:', e);
+      n8nServiceRef.current = null;
+    }
   }, [config]);
 
   // Scroll automático para última mensagem (guardado)
@@ -360,7 +370,7 @@ export function Chat() {
         alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
         return;
       }
-      const service = new N8nService({ ...config, webhookUrl });
+
       if (selectedAudio) {
         // Enviar áudio (usar .mp3 quando possível)
         const inferredType = selectedAudio.type || '';
@@ -375,6 +385,7 @@ export function Chat() {
           sessionId: currentSessionId,
           replyTo: replyingTo?.id,
         });
+        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
         let response = await service.sendFile(audioFile, inputMessage);
         // Fallback: if direct webhook call failed due to network/CORS, try server-side proxy
         if (response?.error && typeof window !== 'undefined') {
@@ -415,6 +426,7 @@ export function Chat() {
           sessionId: currentSessionId,
           replyTo: replyingTo?.id,
         });
+        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
         let response = await service.sendFile(selectedFile, inputMessage);
         if (response?.error && typeof window !== 'undefined') {
           try {
@@ -441,6 +453,7 @@ export function Chat() {
           sessionId: currentSessionId,
           replyTo: replyingTo?.id,
         });
+        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
         let response = await service.sendMessage(inputMessage);
         if (response?.error && typeof window !== 'undefined') {
           try {
@@ -972,21 +985,7 @@ export function Chat() {
               alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
               return;
             }
-            const service = new N8nService({ ...config, webhookUrl });
-            let response = await service.sendMessage(pergunta);
-            if (response?.error && typeof window !== 'undefined') {
-              try {
-                const prox = await fetch('/api/n8n-proxy', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ webhookUrl, message: pergunta, session_id: currentSessionId }),
-                });
-                const proxData = await prox.json();
-                response = proxData;
-              } catch (err) {
-                console.error('Fallback proxy failed:', err);
-              }
-            }
+       
             handleN8nResponse(response);
                 } finally {
             setLoading(false);
@@ -1013,21 +1012,7 @@ export function Chat() {
               alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
               return;
             }
-            const service = new N8nService({ ...config, webhookUrl });
-            let response = await service.sendMessage(pergunta);
-            if (response?.error && typeof window !== 'undefined') {
-              try {
-                const prox = await fetch('/api/n8n-proxy', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ webhookUrl, message: pergunta, session_id: currentSessionId }),
-                });
-                const proxData = await prox.json();
-                response = proxData;
-              } catch (err) {
-                console.error('Fallback proxy failed:', err);
-              }
-            }
+
             handleN8nResponse(response);
                 } finally {
             setLoading(false);
@@ -1054,21 +1039,7 @@ export function Chat() {
               alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
               return;
             }
-            const service = new N8nService({ ...config, webhookUrl });
-            let response = await service.sendMessage(pergunta);
-            if (response?.error && typeof window !== 'undefined') {
-              try {
-                const prox = await fetch('/api/n8n-proxy', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ webhookUrl, message: pergunta, session_id: currentSessionId }),
-                });
-                const proxData = await prox.json();
-                response = proxData;
-              } catch (err) {
-                console.error('Fallback proxy failed:', err);
-              }
-            }
+
             handleN8nResponse(response);
                 } finally {
             setLoading(false);

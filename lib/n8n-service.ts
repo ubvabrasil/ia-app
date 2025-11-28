@@ -1,176 +1,70 @@
-// Serviço de integração com n8n
-import axios from 'axios';
-import { N8nConfig, N8nRequest, N8nResponse } from './types';
+export type N8nConfigPartial = {
+  webhookUrl?: string;
+  authToken?: string | null;
+  chatName?: string;
+  sessionId?: string;
+};
 
 export class N8nService {
-  private config: N8nConfig;
+  config: N8nConfigPartial;
 
-  constructor(config: N8nConfig) {
+  constructor(config: N8nConfigPartial = {}) {
     this.config = config;
   }
 
-  /**
-   * Envia uma mensagem de texto para o webhook n8n
-   */
-  async sendMessage(message: string): Promise<N8nResponse> {
+  private resolveUrl(): string | null {
+    return this.config.webhookUrl || null;
+  }
+
+  async sendMessage(message: string): Promise<any> {
+    const url = this.resolveUrl();
+    if (!url) return { error: 'No webhookUrl configured' };
     try {
-      const payload: N8nRequest = {
+      const body = {
         message,
-        session_id: this.config.sessionId,
+        session_id: this.config.sessionId || null,
       };
-
-      // Comunicação direta com o webhook do n8n
-      if (!this.config.webhookUrl) {
-        throw new Error('Webhook URL is not configured. Please set it in the settings.');
-      }
-      try {
-        const response = await axios.post(this.config.webhookUrl, payload, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(this.config.authToken && {
-              Authorization: `Bearer ${this.config.authToken}`,
-            }),
-          },
-          responseType: 'json',
-          validateStatus: () => true,
-        });
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          const details = {
-            message: error.message,
-            code: error.code,
-            response: error.response ? JSON.stringify(error.response.data) : undefined,
-          };
-          try {
-            console.error('Axios error details:', details);
-          } catch (logErr) {
-            console.error('Axios error (logging failed):', error.message);
-          }
-        } else {
-          console.error('Unexpected error during webhook communication:', error);
-        }
-        return {
-          type: 'text',
-          error: 'Failed to communicate with the webhook. Please verify the URL and network connectivity.',
-        };
-      }
-    } catch (error) {
-      console.error('Error during webhook communication:', error);
-      return {
-        type: 'text',
-        error: 'Failed to communicate with the webhook. Please verify the URL and network connectivity.',
-      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await res.json().catch(() => ({ status: res.status }));
+    } catch (err: any) {
+      return { error: String(err) };
     }
   }
 
-  /**
-   * Envia um arquivo para o webhook n8n
-   */
-  async sendFile(
-    file: File,
-    additionalMessage?: string
-  ): Promise<N8nResponse> {
+  async sendFile(file: File | Blob, message?: string): Promise<any> {
+    const url = this.resolveUrl();
+    if (!url) return { error: 'No webhookUrl configured' };
     try {
-      // Enviar arquivo como multipart/form-data (como um arquivo real)
+      // Prefer multipart/form-data (n8n can accept file uploads)
       const form = new FormData();
-      form.append('file', file, file.name);
-      form.append('fileName', file.name);
-      form.append('fileType', file.type || 'application/octet-stream');
-      form.append('message', additionalMessage || '');
-      form.append('session_id', this.config.sessionId || '');
-
-      // Ensure the webhook URL is valid and log it for debugging
-      if (!this.config.webhookUrl) {
-        throw new Error('Webhook URL is not configured. Please set it in the settings.');
+      // If File provided, append directly; if Blob, wrap as File
+      if ((file as File).name) {
+        form.append('file', file as File, (file as File).name);
+      } else {
+        form.append('file', new Blob([file]), 'file');
       }
-      console.log('Using webhook URL:', this.config.webhookUrl);
+      if (message) form.append('message', message);
+      if (this.config.sessionId) form.append('session_id', this.config.sessionId);
 
-      // Add detailed error handling for network issues
+      const res = await fetch(url, {
+        method: 'POST',
+        body: form,
+      });
+      // Try to parse JSON, but return text fallback
       try {
-        console.log('Sending form-data payload to webhook. URL:', this.config.webhookUrl);
-
-        const headers: Record<string, string> = {
-          // Let the browser/axios set the Content-Type with boundary for FormData
-          ...(this.config.authToken && { Authorization: `Bearer ${this.config.authToken}` }),
-        };
-
-        const response = await axios.post(this.config.webhookUrl, form, {
-          headers,
-          // Accept any response type
-          responseType: 'json',
-          validateStatus: () => true, // Accept all HTTP status codes
-        });
-
-        // Try to extract output from various possible formats
-        let output;
-        if (response.data) {
-          if (typeof response.data === 'string') {
-            // Try to parse as JSON if response is a string
-            try {
-              const parsed = JSON.parse(response.data);
-              output = parsed.output || parsed.Resposta || parsed[0]?.output;
-            } catch (e) {
-              output = response.data;
-            }
-          } else if (Array.isArray(response.data)) {
-            output = response.data[0]?.output || response.data[0]?.Resposta;
-          } else {
-            output = response.data.output || response.data.Resposta;
-          }
-        }
-
-        if (output) {
-          console.log('Extracted output from webhook:', output);
-          return {
-            type: 'text',
-            output,
-          };
-        }
-
-        // Log and return an error if the expected format is not found
-        console.error('Unexpected webhook response format:', JSON.stringify(response.data, null, 2));
-        return {
-          type: 'text',
-          error: 'Webhook response does not contain output.',
-        };
-      } catch (error) {
-        console.error('Error during webhook communication:', error);
-        return {
-          type: 'text',
-          error: 'Failed to communicate with the webhook. Please verify the URL and network connectivity.',
-        };
+        return await res.json();
+      } catch {
+        const text = await res.text();
+        return { text };
       }
-    } catch (error) {
-      console.error('Erro ao enviar arquivo:', error);
-      return {
-        type: 'text',
-        error: 'Erro ao enviar arquivo. Verifique a configuração do n8n.',
-      };
+    } catch (err: any) {
+      return { error: String(err) };
     }
-  }
-
-  /**
-   * Converte arquivo para base64
-   */
-  private fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove o prefixo "data:image/png;base64," ou similar
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  }
-
-  /**
-   * Atualiza a configuração do serviço
-   */
-  updateConfig(config: N8nConfig) {
-    this.config = config;
   }
 }
+
+export default N8nService;
