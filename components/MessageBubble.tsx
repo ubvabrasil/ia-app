@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Message } from '@/lib/types';
 
 // Formatação avançada do texto da assistente
@@ -122,7 +122,6 @@ function formatAssistantText(text: string) {
 
 import { motion } from 'framer-motion';
 import './ui/bubbleMessage.css';
-import { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { parseDbTimestamp, formatToSaoPaulo } from '@/server/datetime';
 import Image from 'next/image';
@@ -335,7 +334,7 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
         )}
 
         {/* Conteúdo de áudio */}
-        {message.contentType === 'audio' && (message.audioUrl || message.audioBase64) && (
+        {message.contentType === 'audio' && message.audioUrl && (
           <div className="space-y-2 min-w-[280px]">
             <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-3 backdrop-blur-sm">
               <audio
@@ -343,13 +342,7 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
                 className="w-full audio-player-modern"
                 preload="metadata"
               >
-                {(() => {
-                  const src = message.audioUrl || (message.audioBase64 ? `data:${message.mimeType || 'audio/wav'};base64,${message.audioBase64}` : undefined);
-                  if (src) {
-                    return <source src={src} type={message.mimeType || 'audio/wav'} />;
-                  }
-                  return null;
-                })()}
+                <source src={message.audioUrl} type="audio/wav" />
                 Seu navegador não suporta a reprodução de áudio.
               </audio>
             </div>
