@@ -41,8 +41,7 @@ export function useAudioRecorder() {
     const sampleRate = audioBuffer.sampleRate;
 
     // Importar lamejs dinamicamente
-    const lame = await import('lamejs');
-    const Mp3Encoder = (lame as any).Mp3Encoder || (lame as any).default?.Mp3Encoder;
+    const { Mp3Encoder } = await import('lamejs');
     if (!Mp3Encoder) throw new Error('lamejs Mp3Encoder não encontrado');
 
     const mp3encoder = new Mp3Encoder(numChannels, sampleRate, 128);

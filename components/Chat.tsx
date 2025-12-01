@@ -5,8 +5,7 @@ import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useChatStore } from '@/lib/store';
 import { v4 as uuidv4 } from 'uuid';
-import { getWebhookConfig } from '@/lib/webhook-config';
-import { N8nService } from '@/lib/n8n-service';
+import { getWebhookConfig, sendWebhook } from '@/lib/webhook-config';
 import { MessageBubble } from './MessageBubble';
 import Avatar from './Avatar';
 import { FileUploader } from './FileUploader';
@@ -17,9 +16,8 @@ import { Input } from './ui/input';
 import { WebGlassDownload } from './WebGlassDownload';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import { Message } from '@/lib/types';
-import { sendWebhookEvent } from '@/lib/webhook-config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from './ui/dialog';
-import { MdAdd,MdSend,MdPerson,MdClose,MdShoppingCart,MdArrowDownward } from 'react-icons/md';
+import { MdAdd, MdSend, MdPerson, MdClose, MdShoppingCart, MdArrowDownward } from 'react-icons/md';
 
 const Sidebar = ({
   isExpanded,
@@ -72,7 +70,7 @@ const Sidebar = ({
         >
           {/* Usando react-icons */}
           <span className="text-white">
-        <MdAdd size={28} />
+            <MdAdd size={28} />
           </span>
           {isExpanded && <span className="text-base font-semibold transition-opacity duration-300 ease-in-out opacity-100">Nova Sessão</span>}
         </button>
@@ -130,14 +128,14 @@ const Sidebar = ({
                       className="p-1 rounded hover:bg-primary/10"
                       aria-label="Salvar nome"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
                       className="p-1 rounded hover:bg-primary/10"
                       aria-label="Cancelar"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                     </button>
                   </>
                 ) : (
@@ -150,7 +148,7 @@ const Sidebar = ({
                       className="p-1 rounded hover:bg-primary/10"
                       aria-label="Editar nome"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/><path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" /><path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" /></svg>
                     </button>
                     <button
                       onClick={() => {
@@ -210,18 +208,26 @@ export function Chat() {
       setAcceptedPolicy(localStorage.getItem('policyAccepted') === 'true');
     }
   }, []);
+  // Sidebar is controlled by `isSidebarExpanded`
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<Blob | null>(null);
   const [clearFile, setClearFile] = useState(false);
+  const [clearAudio, setClearAudio] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  
   // Reset clearFile flag after FileUploader cleans up
   useEffect(() => {
     if (clearFile) {
       setClearFile(false);
     }
   }, [clearFile]);
-  // Sidebar is controlled by `isSidebarExpanded`
-  const [inputMessage, setInputMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedAudio, setSelectedAudio] = useState<Blob | null>(null);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
+  useEffect(() => {
+    if (clearAudio) {
+      setClearAudio(false);
+    }
+  }, [clearAudio]);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
@@ -241,7 +247,6 @@ export function Chat() {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   // Track previous messages length to only scroll when new messages arrive
   const lastMessagesLengthRef = useRef<number>(0);
-  const n8nServiceRef = useRef<N8nService | null>(null);
 
   const {
     messages,
@@ -282,21 +287,6 @@ export function Chat() {
   // Get messages for the current session
   const sessionMessages = getMessagesBySession(currentSessionId);
 
-  // Inicializar serviço n8n
-  useEffect(() => {
-    try {
-      n8nServiceRef.current = new N8nService({
-        webhookUrl: (config as any)?.webhookUrl || (config as any)?.webhookUrl || (config as any)?.webhookUrl,
-        authToken: (config as any)?.authToken,
-        chatName: (config as any)?.chatName,
-        sessionId: (config as any)?.sessionId,
-      });
-    } catch (e) {
-      console.warn('Failed to initialize N8nService:', e);
-      n8nServiceRef.current = null;
-    }
-  }, [config]);
-
   // Scroll automático para última mensagem (guardado)
   useEffect(() => {
     try {
@@ -335,145 +325,158 @@ export function Chat() {
     }
   }, [typing]);
 
-  // Função para adicionar mensagem e fazer broadcast via WebSocket
-  const addMessageAndBroadcast = (message: any) => {
+  // Função para adicionar mensagem localmente
+  const addMessageAndBroadcast = async (message: any) => {
     const fullMessage = {
       ...message,
       id: uuidv4(),
       timestamp: new Date(),
       sessionId: message.sessionId || currentSessionId,
     };
-    
+
     // Adicionar localmente
     addMessage(message);
-    
-    // Broadcast via WebSocket
-    if (isConnected) {
-      wsSend({
-        type: 'message',
-        data: fullMessage,
-      });
+  };
+
+  // Função separada para enviar webhook apenas quando necessário
+  const sendMessageToWebhook = async (message: any) => {
+    let filebase64 = null;
+    let fileurl = null;
+    let filetype = null;
+
+    // Se tem áudio, converter para base64
+    if (message.contentType === 'audio' && message.audioUrl) {
+      try {
+        fileurl = message.audioUrl;
+        filetype = 'audio/mpeg';
+        const response = await fetch(message.audioUrl);
+        const blob = await response.blob();
+        filebase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.error('Erro ao converter áudio para base64:', err);
+      }
     }
-    // Enviar evento webhook conforme configuração
-    sendWebhookEvent('SEND_MESSAGE', fullMessage);
+
+    // Se tem imagem, usar o imageUrl que já está em base64
+    if (message.contentType === 'image' && message.imageUrl) {
+      fileurl = message.imageUrl;
+      filebase64 = message.imageUrl;
+      if (message.imageUrl.startsWith('data:image/png')) {
+        filetype = 'image/png';
+      } else if (message.imageUrl.startsWith('data:image/jpeg') || message.imageUrl.startsWith('data:image/jpg')) {
+        filetype = 'image/jpeg';
+      } else {
+        filetype = 'image/png';
+      }
+    }
+
+    try {
+      const response = await sendWebhook({
+        message: message.content || '',
+        event: 'SEND_MESSAGE',
+        filebase64: filebase64,
+        fileurl: fileurl,
+        filetype: filetype,
+        sessionid: currentSessionId,
+        username: userName || null,
+        whatsappnumber: whatsappNumber || null,
+        contenttype: message.contentType || 'text',
+      });
+      
+      console.log('Resposta do webhook:', response);
+      if (response && response.data) {
+        handleN8nResponse(response.data);
+      }
+    } catch (err) {
+      console.error('Erro ao processar resposta do webhook:', err);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() && !selectedFile && !selectedAudio) return;
     setLoading(true);
-    try {
-      const webhookConfig = await getWebhookConfig();
-      // Accept multiple shapes returned by the admin panel / DB
-      const webhookUrl = webhookConfig?.baseUrl || webhookConfig?.webhook?.baseUrl || webhookConfig?.webhookUrl || webhookConfig?.webhook?.url || webhookConfig?.webhook?.baseUrl || null;
-      console.log('Resolved webhook config:', webhookConfig, '=> webhookUrl:', webhookUrl);
-      if (!webhookUrl) {
-        alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
-        return;
-      }
-
-      if (selectedAudio) {
-        // Enviar áudio (usar .mp3 quando possível)
-        const inferredType = selectedAudio.type || '';
-        const fileName = inferredType.includes('mpeg') || inferredType.includes('mp3') ? 'audio.mp3' : 'audio.mp3';
-        const audioFile = new File([selectedAudio], fileName, { type: 'audio/mpeg' });
-        const audioUrl = URL.createObjectURL(selectedAudio);
-        addMessageAndBroadcast({
-          role: 'user',
-          content: inputMessage || 'Áudio enviado',
-          contentType: 'audio',
-          audioUrl: audioUrl,
-          sessionId: currentSessionId,
-          replyTo: replyingTo?.id,
-        });
-        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
-        let response = await service.sendFile(audioFile, inputMessage);
-        // Fallback: if direct webhook call failed due to network/CORS, try server-side proxy
-        if (response?.error && typeof window !== 'undefined') {
-          try {
-            const prox = await fetch('/api/n8n-proxy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ webhookUrl, file: await audioFile.arrayBuffer(), fileName: audioFile.name, fileType: audioFile.type, message: inputMessage, session_id: currentSessionId }),
-            });
-            const proxData = await prox.json();
-            response = proxData;
-          } catch (err) {
-            console.error('Fallback proxy failed:', err);
-          }
-        }
-        handleN8nResponse(response);
-        setSelectedAudio(null);
-        setInputMessage('');
-      } else if (selectedFile) {
-        const isImage = selectedFile.type.startsWith('image/');
-        let imageBase64: string | undefined = undefined;
-        if (isImage) {
-          imageBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              resolve(reader.result as string);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(selectedFile);
-          });
-        }
-        addMessageAndBroadcast({
-          role: 'user',
-          content: inputMessage || 'Arquivo enviado',
-          contentType: isImage ? 'image' : 'file',
-          imageUrl: isImage ? imageBase64 : undefined,
-          fileName: !isImage ? selectedFile.name : undefined,
-          sessionId: currentSessionId,
-          replyTo: replyingTo?.id,
-        });
-        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
-        let response = await service.sendFile(selectedFile, inputMessage);
-        if (response?.error && typeof window !== 'undefined') {
-          try {
-            const prox = await fetch('/api/n8n-proxy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ webhookUrl, file: await selectedFile.arrayBuffer(), fileName: selectedFile.name, fileType: selectedFile.type, message: inputMessage, session_id: currentSessionId }),
-            });
-            const proxData = await prox.json();
-            response = proxData;
-          } catch (err) {
-            console.error('Fallback proxy failed:', err);
-          }
-        }
-        handleN8nResponse(response);
-        setSelectedFile(null);
-        setInputMessage('');
-        setClearFile(true);
-      } else {
-        addMessageAndBroadcast({
-          role: 'user',
-          content: inputMessage,
-          contentType: 'text',
-          sessionId: currentSessionId,
-          replyTo: replyingTo?.id,
-        });
-        const service = n8nServiceRef.current ?? new N8nService({ webhookUrl });
-        let response = await service.sendMessage(inputMessage);
-        if (response?.error && typeof window !== 'undefined') {
-          try {
-            const prox = await fetch('/api/n8n-proxy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ webhookUrl, message: inputMessage, session_id: currentSessionId }),
-            });
-            const proxData = await prox.json();
-            response = proxData;
-          } catch (err) {
-            console.error('Fallback proxy failed:', err);
-          }
-        }
-        handleN8nResponse(response);
-        setInputMessage('');
-      }
-    } finally {
+    
+    if (selectedAudio) {
+      // Enviar áudio
+      const inferredType = selectedAudio.type || '';
+      const fileName = inferredType.includes('mpeg') || inferredType.includes('mp3') ? 'audio.mp3' : 'audio.mp3';
+      const audioFile = new File([selectedAudio], fileName, { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(selectedAudio);
+      const userMessage = {
+        role: 'user',
+        content: inputMessage || 'Áudio enviado',
+        contentType: 'audio',
+        audioUrl: audioUrl,
+        sessionId: currentSessionId,
+        replyTo: replyingTo?.id,
+      };
+      addMessageAndBroadcast(userMessage);
+      setSelectedAudio(null);
+      setInputMessage('');
+      setClearAudio(true);
       setLoading(false);
-      setReplyingTo(null); // Limpar estado de resposta
+      setReplyingTo(null);
+      
+      // Chamar webhook de forma assíncrona para não travar
+      sendMessageToWebhook(userMessage).catch(err => {
+        console.error('Erro ao enviar webhook:', err);
+      });
+    } else if (selectedFile) {
+      // Enviar arquivo/imagem
+      const isImage = selectedFile.type.startsWith('image/');
+      let imageBase64: string | undefined = undefined;
+      if (isImage) {
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+      }
+      const userMessage = {
+        role: 'user',
+        content: inputMessage || 'Arquivo enviado',
+        contentType: isImage ? 'image' : 'file',
+        imageUrl: isImage ? imageBase64 : undefined,
+        fileName: !isImage ? selectedFile.name : undefined,
+        sessionId: currentSessionId,
+        replyTo: replyingTo?.id,
+      };
+      addMessageAndBroadcast(userMessage);
+      setSelectedFile(null);
+      setInputMessage('');
+      setClearFile(true);
+      setLoading(false);
+      setReplyingTo(null);
+      
+      // Chamar webhook de forma assíncrona para não travar
+      sendMessageToWebhook(userMessage).catch(err => {
+        console.error('Erro ao enviar webhook:', err);
+      });
+    } else {
+      // Enviar texto
+      const userMessage = {
+        role: 'user',
+        content: inputMessage,
+        contentType: 'text',
+        sessionId: currentSessionId,
+        replyTo: replyingTo?.id,
+      };
+      addMessageAndBroadcast(userMessage);
+      setInputMessage('');
+      setLoading(false);
+      setReplyingTo(null);
+      
+      // Chamar webhook de forma assíncrona para não travar
+      sendMessageToWebhook(userMessage).catch(err => {
+        console.error('Erro ao enviar webhook:', err);
+      });
     }
   };
 
@@ -509,7 +512,8 @@ export function Chat() {
         if (!res) return null;
         if (typeof res === 'string') return res;
         if (typeof res === 'object') {
-          // common fields
+          // common fields - PRIORIDADE: output primeiro
+          console.log(res);
           if (res.output && typeof res.output === 'string') return res.output;
           if (res.content && typeof res.content === 'string') return res.content;
           if (res.text && typeof res.text === 'string') return res.text;
@@ -559,10 +563,10 @@ export function Chat() {
 
   // Sidebar session management
   const handleNewSession = () => {
-  const newSessionId = uuidv4();
-  addSession(newSessionId);
-  setCurrentSession(newSessionId);
-  clearSessionMessages(newSessionId);
+    const newSessionId = uuidv4();
+    addSession(newSessionId);
+    setCurrentSession(newSessionId);
+    clearSessionMessages(newSessionId);
   };
 
   // Check localStorage for accepted policy on mount
@@ -790,21 +794,21 @@ export function Chat() {
             </DialogHeader>
             <div className="flex flex-col gap-4">
               <input
-              type="text"
-              placeholder="Nome completo (opcional)"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="border border-border rounded px-3 py-2 w-full"
+                type="text"
+                placeholder="Nome completo (opcional)"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="border border-border rounded px-3 py-2 w-full"
               />
               <input
-              type="text"
-              placeholder="Número do WhatsApp (opcional)"
-              value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
-              className="border border-border rounded px-3 py-2 w-full"
+                type="text"
+                placeholder="Número do WhatsApp (opcional)"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                className="border border-border rounded px-3 py-2 w-full"
               />
               <span className="text-xs text-muted-foreground">
-              Você pode preencher apenas os campos, se preferir.
+                Você pode preencher apenas os campos, se preferir.
               </span>
             </div>
             <DialogFooter>
@@ -850,18 +854,18 @@ export function Chat() {
       <div className="fixed top-6 right-40 z-50 flex items-center gap-4">
         {/* Botões de Login e Cadastro ocultos */}
         {isAuthenticated && (
-            <button
+          <button
             className="bg-muted text-primary rounded-full p-2 shadow hover:bg-muted/80 transition-all flex items-center justify-center border border-white/80"
             title="Usuário logado"
             style={{ width: 44, height: 44 }}
-            >
+          >
             {/* React-icons user/avatar icon */}
             <span className="text-primary">
               <MdAdd size={28} style={{ display: 'none' }} /> {/* hidden, just for import */}
               {/* Use MdPerson from react-icons/md */}
               <MdPerson size={28} />
             </span>
-            </button>
+          </button>
         )}
       </div>
 
@@ -958,204 +962,215 @@ export function Chat() {
           {(sessions.length === 0 || !currentSessionId) ? null : (
             sessionMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full w-full pt-8 pb-4">
-          <div className="mb-2 w-28 h-28 flex items-center justify-center rounded-xl bg-white/80 dark:bg-white/90 shadow hidden sm:flex">
-            <img src="/logo.png" alt="Logo UBVA" className="w-20 h-20 object-contain" />
-          </div>
-          <span className="text-xl font-bold text-primary text-center mb-2">
-            Bem-vindo à Carlos-IA da UBVA!<br />
-            <span className="text-base font-normal text-muted-foreground">Seu assistente inteligente está pronto para ajudar você a transformar conversas em soluções.</span>
-          </span>
-          <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-lg">
-            <span className="text-base font-semibold text-muted-foreground mb-1">Sugestões rápidas:</span>
-            <button
-              className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
-              onClick={async () => {
-                const pergunta = 'Sugira os melhores tipos de vidro para projetos arquitetônicos';
-                addMessageAndBroadcast({
-            role: 'user',
-            content: pergunta,
-            contentType: 'text',
-            sessionId: currentSessionId,
-                });
-                setLoading(true);
-                try {
-            const webhookConfig = await getWebhookConfig();
-            const webhookUrl = webhookConfig?.baseUrl || webhookConfig?.webhook?.baseUrl || webhookConfig?.webhookUrl || webhookConfig?.webhook?.url || webhookConfig?.webhook?.baseUrl || null;
-            if (!webhookUrl) {
-              alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
-              return;
-            }
-       
-            handleN8nResponse(response);
-                } finally {
-            setLoading(false);
-                }
-              }}
-            >
-              Sugira os melhores tipos de vidro para projetos arquitetônicos
-            </button>
-            <button
-              className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
-              onClick={async () => {
-                const pergunta = 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil';
-                addMessageAndBroadcast({
-            role: 'user',
-            content: pergunta,
-            contentType: 'text',
-            sessionId: currentSessionId,
-                });
-                setLoading(true);
-                try {
-            const webhookConfig = await getWebhookConfig();
-            const webhookUrl = webhookConfig?.baseUrl || webhookConfig?.webhook?.baseUrl || webhookConfig?.webhookUrl || webhookConfig?.webhook?.url || webhookConfig?.webhook?.baseUrl || null;
-            if (!webhookUrl) {
-              alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
-              return;
-            }
+                <div className="mb-2 w-28 h-28 flex items-center justify-center rounded-xl bg-white/80 dark:bg-white/90 shadow hidden sm:flex">
+                  <img src="/logo.png" alt="Logo UBVA" className="w-20 h-20 object-contain" />
+                </div>
+                <span className="text-xl font-bold text-primary text-center mb-2">
+                  Bem-vindo à Carlos-IA da UBVA!<br />
+                  <span className="text-base font-normal text-muted-foreground">Seu assistente inteligente está pronto para ajudar você a transformar conversas em soluções.</span>
+                </span>
+                <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-lg">
+                  <span className="text-base font-semibold text-muted-foreground mb-1">Sugestões rápidas:</span>
+                  <button
+                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    onClick={async () => {
+                      const pergunta = 'Sugira os melhores tipos de vidro para projetos arquitetônicos';
+                      addMessageAndBroadcast({
+                        role: 'user',
+                        content: pergunta,
+                        contentType: 'text',
+                        sessionId: currentSessionId,
+                      });
+                      setLoading(true);
+                      try {
+                        const response = await sendWebhook({
+                          message: pergunta,
+                          event: 'SEND_MESSAGE',
+                          filebase64: null,
+                          sessionid: currentSessionId,
+                          username: userName,
+                          whatsappnumber: whatsappNumber,
+                          contenttype: 'text'
+                        });
 
-            handleN8nResponse(response);
-                } finally {
-            setLoading(false);
-                }
-              }}
-            >
-              Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil
-            </button>
-            <button
-              className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
-              onClick={async () => {
-                const pergunta = 'Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?';
-                addMessageAndBroadcast({
-            role: 'user',
-            content: pergunta,
-            contentType: 'text',
-            sessionId: currentSessionId,
-                });
-                setLoading(true);
-                try {
-            const webhookConfig = await getWebhookConfig();
-            const webhookUrl = webhookConfig?.baseUrl || webhookConfig?.webhook?.baseUrl || webhookConfig?.webhookUrl || webhookConfig?.webhook?.url || webhookConfig?.webhook?.baseUrl || null;
-            if (!webhookUrl) {
-              alert('Configure o webhook do n8n no painel de webhook antes de enviar mensagens');
-              return;
-            }
 
-            handleN8nResponse(response);
-                } finally {
-            setLoading(false);
-                }
-              }}
-            >
-              Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?
-            </button>
-          </div>
-          <WebGlassDownload />
+                        handleN8nResponse(response);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Sugira os melhores tipos de vidro para projetos arquitetônicos
+                  </button>
+                  <button
+                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    onClick={async () => {
+                      const pergunta = 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil';
+                      addMessageAndBroadcast({
+                        role: 'user',
+                        content: pergunta,
+                        contentType: 'text',
+                        sessionId: currentSessionId,
+                      });
+                      setLoading(true);
+                      try {
+                        const response = await sendWebhook({
+                          message: pergunta,
+                          event: 'SEND_MESSAGE',
+                          filebase64: null,
+                          sessionid: currentSessionId,
+                          username: userName,
+                          whatsappnumber: whatsappNumber,
+                          contenttype: 'text'
+                        });
+
+                        console.log('Resposta do webhook para a primeira sugestão:', response);
+                        handleN8nResponse(response);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil
+                  </button>
+                  <button
+                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    onClick={async () => {
+                      const pergunta = 'Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?';
+                      addMessageAndBroadcast({
+                        role: 'user',
+                        content: pergunta,
+                        contentType: 'text',
+                        sessionId: currentSessionId,
+                      });
+                      setLoading(true);
+                      try {
+                        const response = await sendWebhook({
+                          message: pergunta,
+                          event: 'SEND_MESSAGE',
+                          filebase64: null,
+                          sessionid: currentSessionId,
+                          username: userName,
+                          whatsappnumber: whatsappNumber,
+                          contenttype: 'text'
+                        });
+                        handleN8nResponse(response);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?
+                  </button>
+                </div>
+                <WebGlassDownload />
               </div>
             ) : (
               <>
-          {sessionMessages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onReply={handleReply}
-              userName={userName}
-            />
-          ))}
-          {/* Animated indicator while IA está formatando a resposta */}
-          {(showTypingIndicator || typing) && (
-            <div className="flex w-full mb-4 justify-start">
-              <div className="flex items-start gap-3">
-                <div className={`assistant-avatar ${showTypingIndicator || typing ? 'pulsing' : ''}`} aria-hidden>
-            <Avatar variant="assistant" size={40} />
-                </div>
-                <div className="max-w-[60%] rounded-2xl px-4 py-3 shadow-sm border border-border bg-gradient-to-br from-[#f7faff] via-[#eaf6ff] to-[#e0f0ff]">
-            <div className="flex items-center gap-3">
-              <div className="formatting-dots" aria-hidden>
-                <span className="dot-1" />
-                <span className="dot-2" />
-                <span className="dot-3" />
-              </div>
-              <div className="text-sm text-slate-700 dark:text-zinc-200"></div>
-            </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+                {sessionMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    onReply={handleReply}
+                    userName={userName}
+                  />
+                ))}
+                {/* Animated indicator while IA está formatando a resposta */}
+                {(showTypingIndicator || typing) && (
+                  <div className="flex w-full mb-4 justify-start">
+                    <div className="flex items-start gap-3">
+                      <div className={`assistant-avatar ${showTypingIndicator || typing ? 'pulsing' : ''}`} aria-hidden>
+                        <Avatar variant="assistant" size={40} />
+                      </div>
+                      <div className="max-w-[60%] rounded-2xl px-4 py-3 shadow-sm border border-border bg-gradient-to-br from-[#f7faff] via-[#eaf6ff] to-[#e0f0ff]">
+                        <div className="flex items-center gap-3">
+                          <div className="formatting-dots" aria-hidden>
+                            <span className="dot-1" />
+                            <span className="dot-2" />
+                            <span className="dot-3" />
+                          </div>
+                          <div className="text-sm text-slate-700 dark:text-zinc-200"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </>
             )
           )}
         </div>
-            {/* Input fixo no fluxo, não mais position: fixed */}
-            <div
-            className="sticky bottom-0 left-0 right-0 border border-border px-4 py-3 bg-card/90 dark:bg-card/90 flex items-center gap-3 z-30 rounded-lg shadow-xl backdrop-blur-sm transition-all duration-200 mt-2"
-            style={{ boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.08)' }}
-            >
-            <Button
-              onClick={handleNewSession}
-              className="bg-gradient-to-r from-primary to-[#4ABF90] text-white px-2 py-1 rounded shadow text-xs new-conversation-button"
-              title="Nova Conversa"
-            >
-              Nova Conversa
-            </Button>
-            <div className="flex-1">
-              {replyingTo && (
+        {/* Input fixo no fluxo, não mais position: fixed */}
+        <div
+          className="sticky bottom-0 left-0 right-0 border border-border px-4 py-3 bg-card/90 dark:bg-card/90 flex items-center gap-3 z-30 rounded-lg shadow-xl backdrop-blur-sm transition-all duration-200 mt-2"
+          style={{ boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.08)' }}
+        >
+          <Button
+            onClick={handleNewSession}
+            className="bg-gradient-to-r from-primary to-[#4ABF90] text-white px-2 py-1 rounded shadow text-xs new-conversation-button"
+            title="Nova Conversa"
+          >
+            Nova Conversa
+          </Button>
+          <div className="flex-1">
+            {replyingTo && (
               <div className="mb-2 p-2 bg-muted/50 rounded-md border-l-4 border-primary flex items-center justify-between">
                 <div className="flex-1">
-                <span className="text-xs text-muted-foreground">Respondendo a:</span>
-                <p className="text-sm truncate">
-                  {replyingTo.content?.length > 40
-                  ? replyingTo.content.slice(0, 40) + '...'
-                  : replyingTo.content}
-                </p>
+                  <span className="text-xs text-muted-foreground">Respondendo a:</span>
+                  <p className="text-sm truncate">
+                    {replyingTo.content?.length > 40
+                      ? replyingTo.content.slice(0, 40) + '...'
+                      : replyingTo.content}
+                  </p>
                 </div>
                 <button
-                onClick={handleCancelReply}
-                className="ml-2 text-muted-foreground hover:text-foreground transition-colors"
-                title="Cancelar resposta"
+                  onClick={handleCancelReply}
+                  className="ml-2 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Cancelar resposta"
                 >
-                <MdClose size={16} />
+                  <MdClose size={16} />
                 </button>
               </div>
-              )}
-              <Input
+            )}
+            <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
+                  e.preventDefault();
+                  handleSendMessage();
                 }
               }}
               placeholder="Digite seu pedido"
               disabled={isLoading}
               className="w-full bg-input text-foreground border border-border rounded-lg shadow-sm px-4 py-2"
-              />
-            </div>
-            <FileUploader
-              onFileSelect={setSelectedFile}
-              disabled={isLoading}
-              clearFile={clearFile}
             />
-            <AudioRecorder
-              onAudioRecorded={setSelectedAudio}
-              disabled={isLoading}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={isLoading || (!inputMessage.trim() && !selectedFile && !selectedAudio)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md shadow-sm flex items-center justify-center"
-            >
-              <span className="block md:hidden">
+          </div>
+          <FileUploader
+            onFileSelect={setSelectedFile}
+            disabled={isLoading}
+            clearFile={clearFile}
+          />
+          <AudioRecorder
+            onAudioRecorded={setSelectedAudio}
+            disabled={isLoading}
+            reset={clearAudio}
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={isLoading || (!inputMessage.trim() && !selectedFile && !selectedAudio)}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md shadow-sm flex items-center justify-center"
+          >
+            <span className="block md:hidden">
               <span className="text-white">
                 <MdSend size={22} />
               </span>
-              </span>
-              <span className="hidden md:block">
+            </span>
+            <span className="hidden md:block">
               Enviar
-              </span>
-            </Button>
-            </div>
+            </span>
+          </Button>
+        </div>
         {/* Rodapé institucional removido conforme solicitado */}
       </div>
     </div>

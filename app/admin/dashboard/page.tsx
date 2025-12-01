@@ -22,7 +22,6 @@ import {
   DialogHeader,
   DialogFooter,
 } from '@/components/ui/dialog';
-import WebhookPanel from '@/app/admin/webhook-panel/page';
 import { FaBroom } from 'react-icons/fa';
 
 interface SessionData {
@@ -44,7 +43,6 @@ export default function AdminDashboard() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -594,36 +592,15 @@ export default function AdminDashboard() {
               {sortOrder === 'desc' ? <SortDesc className="w-4 h-4 mr-2" /> : <SortAsc className="w-4 h-4 mr-2" />}
               {sortOrder === 'desc' ? 'Mais recentes' : 'Mais antigos'}
             </Button>
-            {/* Link rápido para o Painel de Webhook no menu (abre em popup) */}
+            {/* Link rápido para o Painel de Webhook no menu */}
             <Button
               variant="ghost"
-              onClick={() => setShowWebhookModal(true)}
+              onClick={() => router.push('/admin/dashboard/webhook')}
               className="text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
               aria-label="Abrir Painel de Webhook"
             >
               Painel de Webhook
             </Button>
-            <Dialog open={showWebhookModal} onOpenChange={(open) => setShowWebhookModal(open)}>
-              <DialogContent className="max-w-5xl w-full">
-                <DialogHeader>
-                  <DialogTitle>Painel de Webhook</DialogTitle>
-                  <DialogDescription>Configure e teste webhooks para eventos do sistema.</DialogDescription>
-                </DialogHeader>
-                <div className="mt-4 h-[75vh] max-h-[75vh] overflow-auto px-2">
-                  {/* make inner panel scrollable and fit the modal */}
-                  <div className="max-w-none mx-auto w-full">
-                    <WebhookPanel />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-                      Fechar
-                    </button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
             <ThemeToggle />
             <Button variant="outline" onClick={handleLogout} className="border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800">
               <svg

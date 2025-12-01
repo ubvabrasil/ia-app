@@ -58,22 +58,14 @@ app.prepare().then(() => {
       const url = new URL(request.url || '/', `http://${request.headers.host}`);
       const pathname = url.pathname;
       
-      console.log('🔌 WebSocket upgrade request:', {
-        pathname,
-        host: request.headers.host,
-        origin: request.headers.origin,
-      });
-      
       // Apenas interceptar nosso WebSocket em /ws
       if (pathname === '/ws') {
         console.log('✅ Aceitando conexão WebSocket em /ws');
         wss.handleUpgrade(request, socket, head, (ws) => {
           wss.emit('connection', ws, request);
         });
-      } else {
-        console.log('⚠️  Path não é /ws, ignorando:', pathname);
       }
-      // Para outros paths (incluindo HMR do Next.js), não fazer nada
+      // Para outros paths (incluindo HMR do Next.js /_next/webpack-hmr), não fazer nada
       // O Next.js tem seus próprios handlers de upgrade
     } catch (error) {
       console.error('❌ Erro no upgrade WebSocket:', error);

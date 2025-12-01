@@ -11,7 +11,10 @@ export async function GET() {
       return Response.json({ webhookUrl: '' });
     }
 
-    return Response.json(result.rows[0].data || { webhookUrl: '' });
+    const data = result.rows[0].data;
+    // Retorna no formato novo, mas extrai de formatos antigos se necessário
+    const webhookUrl = data?.webhookUrl || data?.webhook?.baseUrl || data?.baseUrl || '';
+    return Response.json({ webhookUrl });
   } catch (err) {
     console.error('Erro ao buscar config do webhook:', err);
     return Response.json({ webhookUrl: '' });

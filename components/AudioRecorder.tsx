@@ -18,7 +18,6 @@ export function AudioRecorder({ onAudioRecorded, disabled = false, reset }: Audi
   const { 
     isRecording, 
     audioBlob, 
-    elapsedTime,
     permissionState, 
     startRecording, 
     stopRecording, 
@@ -26,6 +25,25 @@ export function AudioRecorder({ onAudioRecorded, disabled = false, reset }: Audi
     checkPermission, 
     requestPermission 
   } = useAudioRecorder();
+
+  // local elapsedTime because the hook does not expose it
+  const [elapsedTime, setElapsedTime] = useState(0);
+  useEffect(() => {
+    let intervalId: number | undefined;
+
+    if (isRecording) {
+      setElapsedTime(0);
+      intervalId = window.setInterval(() => {
+        setElapsedTime((s) => s + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [isRecording]);
   
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 

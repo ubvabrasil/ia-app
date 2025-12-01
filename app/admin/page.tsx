@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,14 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Verificar se já está autenticado
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      router.push('/admin/dashboard');
+    }
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -25,8 +33,8 @@ export default function AdminLogin() {
 
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       // Salvar token de autenticação
-      sessionStorage.setItem('adminToken', btoa(`${username}:${password}`));
-      sessionStorage.setItem('adminAuth', 'true');
+      localStorage.setItem('adminToken', btoa(`${username}:${password}`));
+      localStorage.setItem('adminAuth', 'true');
       router.push('/admin/dashboard');
     } else {
       setError('Usuário ou senha inválidos');
