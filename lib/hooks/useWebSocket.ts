@@ -95,45 +95,40 @@ export function useWebSocket(onMessage?: (message: WSMessage) => void): UseWebSo
       };
 
       ws.current.onerror = (error) => {
-        if (error instanceof Event && error.target instanceof WebSocket) {
-          console.error('❌ Erro no WebSocket:', {
-            url: error.target.url || 'URL desconhecida',
-            readyState: error.target.readyState ?? 'Estado desconhecido',
-            message: 'WebSocket error event',
-          });
-        } else if (error instanceof Error) {
-          console.error('❌ Erro no WebSocket:', {
-            message: error.message || 'Erro desconhecido',
-            stack: error.stack || 'Sem stack trace',
-            rawError: error,
-          });
-        } else {
-          console.error('❌ Erro no WebSocket:', {
-            message: 'Erro desconhecido',
-            rawError: error,
-          });
-        }
         isConnecting.current = false;
+        // Silenciar erro - será tratado no onclose
+        // O WebSocket sempre dispara error antes de close
       };
 
       ws.current.onclose = (event) => {
-        console.log('❌ WebSocket desconectado', event.code, event.reason);
+        isConnecting.current = false;
+        
+        // Apenas logar se não for um fechamento normal
+        if (event.code !== 1000) {
+          console.log('⚠️  WebSocket desconectado:', {
+            code: event.code,
+            reason: event.reason || 'Sem razão especificada',
+            wasClean: event.wasClean
+          });
+        }
         setIsConnected(false);
         isConnecting.current = false;
         
-        // Tentar reconectar apenas se não foi fechamento intencional
+        // Apenas tentar reconectar se não foi fechamento intencional E se o servidor WebSocket está configurado
         if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
-          console.log(`🔄 Tentando reconectar em ${delay}ms (tentativa ${reconnectAttempts.current}/${maxReconnectAttempts})`);
+          
+          // Apenas logar a primeira tentativa para reduzir ruído
+          if (reconnectAttempts.current === 1) {
+            console.log(`🔄 WebSocket desconectado, tentando reconectar...`);
+          }
           
           reconnectTimeout.current = setTimeout(() => {
             connect();
           }, delay);
-        } else if (event.code === 1000) {
-          console.log('✅ Conexão fechada normalmente');
-        } else {
-          console.log('❌ Máximo de tentativas de reconexão atingido');
+        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          console.log('ℹ️  WebSocket não disponível (modo sem tempo real)');
         }
       };
     } catch (error) {
