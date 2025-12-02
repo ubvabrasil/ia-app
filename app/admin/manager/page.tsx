@@ -23,7 +23,7 @@ export default function ManagerPage() {
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'} p-0`}>
       <header className="flex items-center justify-between px-8 py-6 border-b border-border bg-primary/5">
         <div className="flex items-center gap-4">
-          <img src="/logo.png" alt="Logo UBVA" className="w-12 h-12 rounded-full" />
+          <img src="/logo.png?v=2" alt="Logo UBVA" className="w-20 h-20 rounded-full" />
           <span className="text-3xl font-bold tracking-tight">UBVA Manager</span>
         </div>
         <div className="flex gap-2">

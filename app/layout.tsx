@@ -35,6 +35,35 @@ export default function RootLayout({
                     document.documentElement.classList.add('dark');
                   }
                 }
+                
+                // Suprimir erros de extensões do Chrome
+                const originalError = window.console.error;
+                window.console.error = function(...args) {
+                  const message = args[0]?.toString() || '';
+                  // Ignorar erros de extensões do Chrome
+                  if (message.includes('Extension context invalidated') || 
+                      message.includes('chrome-extension://')) {
+                    return;
+                  }
+                  originalError.apply(console, args);
+                };
+                
+                // Suprimir erros não tratados de extensões
+                window.addEventListener('error', function(event) {
+                  if (event.filename?.includes('chrome-extension://')) {
+                    event.preventDefault();
+                    return false;
+                  }
+                });
+                
+                window.addEventListener('unhandledrejection', function(event) {
+                  const message = event.reason?.toString() || '';
+                  if (message.includes('Extension context invalidated') || 
+                      message.includes('chrome-extension://')) {
+                    event.preventDefault();
+                    return false;
+                  }
+                });
               })();
             `,
           }}

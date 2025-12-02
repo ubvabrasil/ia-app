@@ -46,8 +46,6 @@ export default function AdminDashboard() {
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [transcribingAudio, setTranscribingAudio] = useState<string | null>(null);
-  const [audioTranscriptions, setAudioTranscriptions] = useState<Record<string, string>>({});
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const loadingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -65,12 +63,14 @@ export default function AdminDashboard() {
   // Carregar mensagens de uma sessão específica
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     try {
+      console.log('[loadSessionMessages] Iniciando carregamento para:', sessionId);
       const res = await fetch(`/api/session/${sessionId}/messages`);
       if (!res.ok) {
-        console.error('Erro ao carregar mensagens da sessão:', res.status);
+        console.error('[loadSessionMessages] Erro ao carregar mensagens:', res.status, res.statusText);
         return [];
       }
       const messages = await res.json();
+      console.log('[loadSessionMessages] Mensagens recebidas:', Array.isArray(messages) ? messages.length : 'não é array', messages);
       
       // Normalizar mensagens
       return (Array.isArray(messages) ? messages : []).map((m: any) => {
@@ -114,27 +114,35 @@ export default function AdminDashboard() {
   const loadSessions = useCallback(async () => {
     // Evitar múltiplas chamadas simultâneas
     if (loadingRef.current || !mountedRef.current) {
+      console.log('[loadSessions] Bloqueado - loading:', loadingRef.current, 'mounted:', mountedRef.current);
       return;
     }
     
     loadingRef.current = true;
+    console.log('[loadSessions] Iniciando carregamento de sessões...');
     
     try {
       // Usar endpoint otimizado para listar sessões
       const res = await fetch('/api/session/summary');
+      console.log('[loadSessions] Resposta da API:', res.status, res.statusText);
+      
       if (!res.ok) {
-        console.error('Erro ao carregar sessões:', res.status, res.statusText);
+        console.error('[loadSessions] Erro ao carregar sessões:', res.status, res.statusText);
         return;
       }
       const sessionsSummary = await res.json();
+      console.log('[loadSessions] Sessões recebidas:', sessionsSummary.length, sessionsSummary);
       
       // Validar se sessionsSummary é um array
       if (!Array.isArray(sessionsSummary)) {
-        console.error('Resposta inválida da API /api/session/summary:', sessionsSummary);
+        console.error('[loadSessions] Resposta inválida da API /api/session/summary:', sessionsSummary);
         return;
       }
       
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log('[loadSessions] Componente desmontado, abortando');
+        return;
+      }
       
       const sessionNames = store.sessionNames || {};
       
@@ -152,6 +160,8 @@ export default function AdminDashboard() {
         };
       });
       
+      console.log('[loadSessions] Sessões processadas:', sessionsData.length);
+      
       // Ordenar por última atividade conforme sortOrder
       sessionsData.sort((a, b) => {
         const aTime = a.lastActivity ? a.lastActivity.getTime() : new Date(0).getTime();
@@ -163,7 +173,7 @@ export default function AdminDashboard() {
       
       // Manter mensagens da sessão atualmente selecionada
       setSessions(prev => {
-        return sessionsData.map(newSession => {
+        const updated = sessionsData.map(newSession => {
           const oldSession = prev.find(s => s.sessionId === newSession.sessionId);
           // Se a sessão estava selecionada e já tinha mensagens carregadas, manter
           if (oldSession && oldSession.sessionId === selectedSession && oldSession.messages.length > 0) {
@@ -171,6 +181,8 @@ export default function AdminDashboard() {
           }
           return newSession;
         });
+        console.log('[loadSessions] Sessões atualizadas no estado:', updated.length);
+        return updated;
       });
       
       // compute unread based on last seen admin timestamp
@@ -192,8 +204,8 @@ export default function AdminDashboard() {
     mountedRef.current = true;
     
     // Verificar autenticação
-    const adminAuth = sessionStorage.getItem('adminAuth');
-    if (adminAuth !== 'true') {
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
       router.push('/admin');
       return;
     }
@@ -212,17 +224,8 @@ export default function AdminDashboard() {
       }
     };
 
-    // Predefinir o período para HOJE por padrão (usuário pode alterar)
-    try {
-      if (!startDate && !endDate) {
-        const now = parseDbTimestamp(Date.now());
-        const iso = formatToYMD(now) || '';
-        setStartDate(iso);
-        setEndDate(iso);
-      }
-    } catch {
-      // ignore date errors
-    }
+    // NÃO definir período padrão - mostrar TODAS as sessões por padrão
+    console.log('[Dashboard Init] Sem filtro de data padrão, mostrando todas as sessões');
 
     // Carregar todas as sessões
     loadDates();
@@ -237,96 +240,11 @@ export default function AdminDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  // Auto-transcrever áudios ao carregar mensagens
-  useEffect(() => {
-    if (!selectedSession || !sessions.length) return;
-    
-    const session = sessions.find(s => s.sessionId === selectedSession);
-    if (!session?.messages) return;
-    
-    // Transcrever automaticamente todos os áudios que ainda não foram transcritos
-    const audioMessages = session.messages.filter(msg => 
-      msg.contentType === 'audio' && 
-      !audioTranscriptions[msg.id] && 
-      transcribingAudio !== msg.id &&
-      (((msg as any).audioBase64) || msg.audioUrl)
-    );
-    
-    // Transcrever um de cada vez para evitar sobrecarga
-    if (audioMessages.length > 0 && !transcribingAudio) {
-      const firstAudio = audioMessages[0];
-      transcribeAudio(firstAudio.audioUrl || firstAudio.content, firstAudio.id, firstAudio);
-    }
-  }, [selectedSession, sessions, audioTranscriptions, transcribingAudio]);
-
-  const transcribeAudio = async (audioUrl: string, messageId: string, message?: any) => {
-    try {
-      setTranscribingAudio(messageId);
-      
-      let audioBlob: Blob;
-      
-      // Se tiver audioBase64 na mensagem, usar diretamente
-      if (message?.audioBase64) {
-        const mimeType = message.mimeType || 'audio/webm';
-        const base64Response = await fetch(`data:${mimeType};base64,${message.audioBase64}`);
-        audioBlob = await base64Response.blob();
-      } else if (audioUrl && audioUrl.startsWith('blob:')) {
-        // Se for blob URL, fazer fetch direto
-        const audioResponse = await fetch(audioUrl);
-        audioBlob = await audioResponse.blob();
-      } else if (audioUrl && audioUrl.startsWith('data:')) {
-        // Se for data URL, converter
-        const audioResponse = await fetch(audioUrl);
-        audioBlob = await audioResponse.blob();
-      } else {
-        throw new Error('Formato de áudio não suportado para transcrição');
-      }
-      
-      // Preparar FormData para Groq
-      const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.webm');
-      formData.append('model', 'whisper-large-v3');
-      formData.append('language', 'pt');
-      formData.append('response_format', 'json');
-      
-      // Chamar API Groq
-      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`
-                },
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erro Groq API:', errorText);
-        throw new Error(`Erro na transcrição: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      const transcription = result.text || 'Transcrição não disponível';
-      
-      // Salvar transcrição
-      setAudioTranscriptions(prev => ({
-        ...prev,
-        [messageId]: transcription,
-      }));
-      
-    } catch (error) {
-      console.error('Erro ao transcrever áudio:', error);
-      setAudioTranscriptions(prev => ({
-        ...prev,
-        [messageId]: `Erro: ${error instanceof Error ? error.message : 'Falha na transcrição'}`,
-      }));
-    } finally {
-      setTranscribingAudio(null);
-    }
-  };
+  // Auto-transcrever áudios REMOVIDO - MessageBubble já faz isso automaticamente
 
   const handleLogout = () => {
-    sessionStorage.removeItem('adminAuth');
-    sessionStorage.removeItem('adminToken');
+    localStorage.removeItem('adminAuth');
+    localStorage.removeItem('adminToken');
     router.push('/admin');
   };
 
@@ -340,25 +258,30 @@ export default function AdminDashboard() {
   const filteredSessions = sessions.filter(session => {
     const matchesText = session.sessionName.toLowerCase().includes(searchTerm.toLowerCase()) || session.sessionId.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesText) return false;
-    // If a date range is chosen, include sessions that have at least one message inside the period
+    
+    // Se há filtro de data, verificar pela lastActivity em vez de mensagens individuais
+    // (já que mensagens são carregadas sob demanda)
     if (startDate || endDate) {
       const s = startDate ? parseDbTimestamp(startDate) : null;
       const e = endDate ? parseDbTimestamp(endDate) : null;
-      const hasInRange = session.messages.some((m) => {
-        const t = parseDbTimestamp(m.timestamp);
-        if (!t) return false;
-        // Compare only the date part (YYYY-MM-DD) to ensure inclusivity
-        const tYMD = formatToYMD(t);
+      
+      // Se a sessão tem lastActivity, usar isso
+      if (session.lastActivity) {
+        const lastActivityYMD = formatToYMD(session.lastActivity);
         const sYMD = s ? formatToYMD(s) : null;
         const eYMD = e ? formatToYMD(e) : null;
-        if (sYMD && tYMD && tYMD < sYMD) return false;
-        if (eYMD && tYMD && tYMD > eYMD) return false;
-        return true;
-      });
-      if (!hasInRange) return false;
+        
+        if (sYMD && lastActivityYMD && lastActivityYMD < sYMD) return false;
+        if (eYMD && lastActivityYMD && lastActivityYMD > eYMD) return false;
+      } else {
+        // Se não tem lastActivity, não incluir quando há filtro de data
+        return false;
+      }
     }
     return true;
   });
+  
+  console.log('[Dashboard] Total de sessões:', sessions.length, 'Filtradas:', filteredSessions.length);
 
   // Usar datas carregadas do banco de dados
   const availableDatesAsc = availableDates.sort((a, b) => (a < b ? -1 : 1));
@@ -369,18 +292,36 @@ export default function AdminDashboard() {
 
   // Carregar mensagens quando uma sessão é selecionada
   useEffect(() => {
-    if (selectedSession && selectedSessionData && selectedSessionData.messages.length === 0) {
-      loadSessionMessages(selectedSession).then(messages => {
-        if (!mountedRef.current) return;
-        setSessions(prev => prev.map(s => 
-          s.sessionId === selectedSession 
-            ? { ...s, messages } 
-            : s
-        ));
-      });
+    if (!selectedSession) {
+      console.log('[Admin Dashboard] Nenhuma sessão selecionada');
+      return;
     }
+    
+    if (!selectedSessionData) {
+      console.log('[Admin Dashboard] Sessão selecionada não encontrada:', selectedSession);
+      return;
+    }
+    
+    if (selectedSessionData.messages.length > 0) {
+      console.log('[Admin Dashboard] Mensagens já carregadas:', selectedSessionData.messages.length);
+      return;
+    }
+    
+    console.log('[Admin Dashboard] Carregando mensagens para sessão:', selectedSession);
+    
+    loadSessionMessages(selectedSession).then(messages => {
+      if (!mountedRef.current) return;
+      console.log('[Admin Dashboard] Mensagens carregadas:', messages.length);
+      setSessions(prev => prev.map(s => 
+        s.sessionId === selectedSession 
+          ? { ...s, messages } 
+          : s
+      ));
+    }).catch(err => {
+      console.error('[Admin Dashboard] Erro ao carregar mensagens:', err);
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSession]);
+  }, [selectedSession, selectedSessionData?.messages?.length]);
 
   // Optional small notifications panel (shows recent sessions with activity)
   const recentSessions = sessions.slice(0, 6);
@@ -957,40 +898,7 @@ export default function AdminDashboard() {
                             userName={selectedSessionData.nome_completo || undefined}
                           />
                           
-                          {/* Botão de transcrição para mensagens de áudio */}
-                          {message.contentType === 'audio' && (message.audioUrl || (message as any).audioBase64 || message.content) && (
-                            <div className={`${message.role === 'user' ? 'ml-auto' : 'mr-auto'} max-w-md`}>
-                              {audioTranscriptions[message.id] ? (
-                                <div className="bg-accent/50 rounded-lg p-3 border border-border">
-                                  <p className="text-xs font-semibold text-foreground mb-1">🎤 Transcrição:</p>
-                                  <p className="text-sm text-foreground italic">{audioTranscriptions[message.id]}</p>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => transcribeAudio(message.audioUrl || message.content, message.id, message)}
-                                  disabled={transcribingAudio === message.id}
-                                  className="w-full text-xs px-3 py-2 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
-                                >
-                                  {transcribingAudio === message.id ? (
-                                    <>
-                                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                      </svg>
-                                      Transcrevendo...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                      </svg>
-                                      Transcrever áudio
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          {/* MessageBubble já faz transcrição automática, não precisa duplicar */}
                         </div>
                       ))
                     )}

@@ -44,7 +44,7 @@ const Sidebar = ({
   const [editText, setEditText] = useState('');
 
   return (
-    <aside className={`fixed left-0 top-24 bottom-0 ${isExpanded ? 'w-72' : 'w-16'} bg-muted shadow-lg rounded-r-lg flex flex-col z-20 transition-width duration-300`}>
+    <aside className={`fixed left-0 top-16 sm:top-24 bottom-0 ${isExpanded ? 'w-72' : 'w-16'} bg-muted shadow-lg rounded-r-lg flex flex-col z-20 transition-width duration-300 hidden md:flex`}>
       {/* Botão de colapsar/expandir sidebar centralizado */}
       <div className="flex items-center justify-center p-4">
         <button
@@ -327,14 +327,12 @@ export function Chat() {
 
   // Função para adicionar mensagem localmente
   const addMessageAndBroadcast = async (message: any) => {
-    const fullMessage = {
-      ...message,
-      id: uuidv4(),
-      timestamp: new Date(),
-      sessionId: message.sessionId || currentSessionId,
-    };
-
-    // Adicionar localmente
+    console.log('[Chat] addMessageAndBroadcast called with:', {
+      role: message.role,
+      content: message.content?.substring(0, 50),
+      contentType: message.contentType,
+    });
+    // Apenas adicionar localmente - o store já cria id e timestamp
     addMessage(message);
   };
 
@@ -344,21 +342,10 @@ export function Chat() {
     let fileurl = null;
     let filetype = null;
 
-    // Se tem áudio, converter para base64
-    if (message.contentType === 'audio' && message.audioUrl) {
-      try {
-        fileurl = message.audioUrl;
-        filetype = 'audio/mpeg';
-        const response = await fetch(message.audioUrl);
-        const blob = await response.blob();
-        filebase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-      } catch (err) {
-        console.error('Erro ao converter áudio para base64:', err);
-      }
+    // Se tem áudio, usar o audioBase64 que já foi convertido
+    if (message.contentType === 'audio' && message.audioBase64) {
+      filebase64 = message.audioBase64;
+      filetype = 'audio/mpeg';
     }
 
     // Se tem imagem, usar o imageUrl que já está em base64
@@ -401,16 +388,24 @@ export function Chat() {
     setLoading(true);
     
     if (selectedAudio) {
-      // Enviar áudio
-      const inferredType = selectedAudio.type || '';
-      const fileName = inferredType.includes('mpeg') || inferredType.includes('mp3') ? 'audio.mp3' : 'audio.mp3';
-      const audioFile = new File([selectedAudio], fileName, { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(selectedAudio);
+      // Converter áudio para base64 antes de enviar
+      let audioBase64: string | undefined;
+      try {
+        audioBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedAudio);
+        });
+      } catch (err) {
+        console.error('Erro ao converter áudio para base64:', err);
+      }
+
       const userMessage = {
         role: 'user',
         content: inputMessage || 'Áudio enviado',
         contentType: 'audio',
-        audioUrl: audioUrl,
+        audioBase64: audioBase64,
         sessionId: currentSessionId,
         replyTo: replyingTo?.id,
       };
@@ -742,11 +737,11 @@ export function Chat() {
   const [showWebGlassModal, setShowWebGlassModal] = useState(false);
 
   return (
-    <div className="flex h-full w-full pl-0">
+    <div className="flex h-full w-full pl-0 md:pl-0">
       {/* Render privacy modal first */}
       {!acceptedPolicy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl p-10 max-w-md w-full flex flex-col gap-8 border border-border text-gray-900 dark:text-white animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-2xl p-6 sm:p-10 max-w-md w-full flex flex-col gap-4 sm:gap-8 border border-border text-gray-900 dark:text-white animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex flex-col items-center gap-2">
               <div className="bg-primary/10 rounded-full p-4 mb-2">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
@@ -850,8 +845,8 @@ export function Chat() {
         </Dialog>
       )}
 
-      {/* Topbar com botão de login mais afastado do topo/dark mode */}
-      <div className="fixed top-6 right-40 z-50 flex items-center gap-4">
+      {/* Topbar com botão de login responsivo */}
+      <div className="fixed top-20 sm:top-6 right-4 sm:right-40 z-50 flex items-center gap-2 sm:gap-4">
         {/* Botões de Login e Cadastro ocultos */}
         {isAuthenticated && (
           <button
@@ -875,8 +870,8 @@ export function Chat() {
           {/* Desfoque na página transparente */}
           <div className="fixed inset-0 z-40 backdrop-blur-sm bg-transparent transition-all" />
           {/* Popover de login */}
-          <div className="fixed top-20 right-40 z-50">
-            <div className="bg-white dark:bg-card rounded-lg shadow-lg p-8 w-80 flex flex-col gap-4 border border-border">
+          <div className="fixed top-24 sm:top-20 right-4 sm:right-40 z-50 max-w-[calc(100vw-2rem)] sm:max-w-none">
+            <div className="bg-white dark:bg-card rounded-lg shadow-lg p-4 sm:p-8 w-full sm:w-80 flex flex-col gap-3 sm:gap-4 border border-border">
               <h2 className="text-2xl font-bold mb-2 text-center">Login</h2>
               <input
                 type="email"
@@ -913,8 +908,8 @@ export function Chat() {
           {/* Desfoque na página transparente */}
           <div className="fixed inset-0 z-40 backdrop-blur-sm bg-transparent transition-all" />
           {/* Popover de cadastro */}
-          <div className="fixed top-20 right-8 z-50">
-            <div className="bg-white dark:bg-card rounded-lg shadow-lg p-8 w-80 flex flex-col gap-4 border border-border">
+          <div className="fixed top-24 sm:top-20 right-4 sm:right-8 z-50 max-w-[calc(100vw-2rem)] sm:max-w-none">
+            <div className="bg-white dark:bg-card rounded-lg shadow-lg p-4 sm:p-8 w-full sm:w-80 flex flex-col gap-3 sm:gap-4 border border-border">
               <h2 className="text-2xl font-bold mb-2 text-center">Cadastro</h2>
               <input
                 type="text"
@@ -954,25 +949,25 @@ export function Chat() {
       {/* Botão de dark mode deve ficar em right-8, logo à direita do login */}
       {/* Sidebar oculto */}
       <div className="flex-1 bg-gradient-to-b from-background to-muted pt-0 min-h-0 flex flex-col">
-        {/* Main Chat Area */}
+        {/* Main Chat Area - Responsivo */}
         <div
-          className="flex-1 overflow-y-auto chat-scrollbar px-4 py-6 space-y-4 pb-28 min-h-0 flex flex-col"
+          className="flex-1 overflow-y-auto chat-scrollbar px-2 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-4 pb-28 min-h-0 flex flex-col"
           ref={messagesContainerRef}
         >
           {(sessions.length === 0 || !currentSessionId) ? null : (
             sessionMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full w-full pt-8 pb-4">
-                <div className="mb-2 w-28 h-28 flex items-center justify-center rounded-xl bg-white/80 dark:bg-white/90 shadow hidden sm:flex">
-                  <img src="/logo.png" alt="Logo UBVA" className="w-20 h-20 object-contain" />
+              <div className="flex flex-col items-center justify-center h-full w-full pt-4 sm:pt-8 pb-4 px-2">
+                <div className="mb-2 w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center rounded-xl bg-white/80 dark:bg-white/90 shadow">
+                  <img src="/logo.png?v=2" alt="Logo UBVA" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-xl font-bold text-primary text-center mb-2">
+                <span className="text-lg sm:text-xl font-bold text-primary text-center mb-2 px-2">
                   Bem-vindo à Carlos-IA da UBVA!<br />
-                  <span className="text-base font-normal text-muted-foreground">Seu assistente inteligente está pronto para ajudar você a transformar conversas em soluções.</span>
+                  <span className="text-sm sm:text-base font-normal text-muted-foreground">Seu assistente inteligente está pronto para ajudar você a transformar conversas em soluções.</span>
                 </span>
-                <div className="flex flex-col items-center gap-2 mt-4 w-full max-w-lg">
-                  <span className="text-base font-semibold text-muted-foreground mb-1">Sugestões rápidas:</span>
+                <div className="flex flex-col items-center gap-2 sm:gap-2 mt-4 w-full max-w-xs sm:max-w-md md:max-w-lg px-2">
+                  <span className="text-sm sm:text-base font-semibold text-muted-foreground mb-1">Sugestões rápidas:</span>
                   <button
-                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    className="bg-primary/90 hover:bg-primary text-white px-3 sm:px-4 py-2 rounded-lg shadow font-medium text-sm sm:text-base w-full transition-colors break-words text-left"
                     onClick={async () => {
                       const pergunta = 'Sugira os melhores tipos de vidro para projetos arquitetônicos';
                       addMessageAndBroadcast({
@@ -1003,7 +998,7 @@ export function Chat() {
                     Sugira os melhores tipos de vidro para projetos arquitetônicos
                   </button>
                   <button
-                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    className="bg-primary/90 hover:bg-primary text-white px-3 sm:px-4 py-2 rounded-lg shadow font-medium text-sm sm:text-base w-full transition-colors break-words text-left"
                     onClick={async () => {
                       const pergunta = 'Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil';
                       addMessageAndBroadcast({
@@ -1034,7 +1029,7 @@ export function Chat() {
                     Quais são as práticas mais comuns de sustentabilidade na produção de vidro no Brasil
                   </button>
                   <button
-                    className="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-lg shadow font-medium text-base w-full transition-colors"
+                    className="bg-primary/90 hover:bg-primary text-white px-3 sm:px-4 py-2 rounded-lg shadow font-medium text-sm sm:text-base w-full transition-colors break-words text-left"
                     onClick={async () => {
                       const pergunta = 'Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?';
                       addMessageAndBroadcast({
@@ -1102,12 +1097,12 @@ export function Chat() {
         </div>
         {/* Input fixo no fluxo, não mais position: fixed */}
         <div
-          className="sticky bottom-0 left-0 right-0 border border-border px-4 py-3 bg-card/90 dark:bg-card/90 flex items-center gap-3 z-30 rounded-lg shadow-xl backdrop-blur-sm transition-all duration-200 mt-2"
+          className="sticky bottom-0 left-0 right-0 border border-border px-2 sm:px-4 py-2 sm:py-3 bg-card/90 dark:bg-card/90 flex items-center gap-2 sm:gap-3 z-30 rounded-lg shadow-xl backdrop-blur-sm transition-all duration-200 mt-2"
           style={{ boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.08)' }}
         >
           <Button
             onClick={handleNewSession}
-            className="bg-gradient-to-r from-primary to-[#4ABF90] text-white px-2 py-1 rounded shadow text-xs new-conversation-button"
+            className="hidden sm:flex bg-gradient-to-r from-primary to-[#4ABF90] text-white px-2 py-1 rounded shadow text-xs new-conversation-button"
             title="Nova Conversa"
           >
             Nova Conversa
@@ -1143,7 +1138,7 @@ export function Chat() {
               }}
               placeholder="Digite seu pedido"
               disabled={isLoading}
-              className="w-full bg-input text-foreground border border-border rounded-lg shadow-sm px-4 py-2"
+              className="w-full bg-input text-foreground border border-border rounded-lg shadow-sm px-3 sm:px-4 py-2 text-sm sm:text-base"
             />
           </div>
           <FileUploader
@@ -1159,11 +1154,11 @@ export function Chat() {
           <Button
             onClick={handleSendMessage}
             disabled={isLoading || (!inputMessage.trim() && !selectedFile && !selectedAudio)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md shadow-sm flex items-center justify-center"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 sm:px-4 py-2 rounded-md shadow-sm flex items-center justify-center min-w-[44px]"
           >
             <span className="block md:hidden">
               <span className="text-white">
-                <MdSend size={22} />
+                <MdSend size={20} />
               </span>
             </span>
             <span className="hidden md:block">

@@ -7,11 +7,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 let dbExport: { type: 'pg'; pool: Pool };
 
 const {
-  POSTGRES_HOST = process.env.POSTGRES_HOST,
-  POSTGRES_PORT = '5432',
-  POSTGRES_USER = 'postgres',
-  POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD,
-  POSTGRES_DB = process.env.POSTGRES_DB,
+  POSTGRES_HOST = process.env.PGHOST || process.env.POSTGRES_HOST,
+  POSTGRES_PORT = process.env.PGPORT || '5432',
+  POSTGRES_USER = process.env.PGUSER || 'postgres',
+  POSTGRES_PASSWORD = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
+  POSTGRES_DB = process.env.PGDATABASE || process.env.POSTGRES_DB,
 } = process.env;
 
 const pool = new Pool({
@@ -20,6 +20,15 @@ const pool = new Pool({
   user: POSTGRES_USER,
   password: POSTGRES_PASSWORD,
   database: POSTGRES_DB,
+});
+
+// Log connection info for debugging
+console.log('PostgreSQL connection config:', {
+  host: POSTGRES_HOST,
+  port: Number(POSTGRES_PORT || 5432),
+  user: POSTGRES_USER,
+  database: POSTGRES_DB,
+  passwordConfigured: !!POSTGRES_PASSWORD,
 });
 
 // Initialize tables asynchronously (don't block startup)

@@ -40,8 +40,19 @@ export function useAudioRecorder() {
     const numChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
 
-    // Importar lamejs dinamicamente
-    const { Mp3Encoder } = await import('lamejs');
+    // Carregar lamejs do bundle completo
+    if (typeof (window as any).lamejs === 'undefined') {
+      // Carregar o script do lame.all.js se ainda não estiver carregado
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.all.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Falha ao carregar lamejs'));
+        document.head.appendChild(script);
+      });
+    }
+
+    const Mp3Encoder = (window as any).lamejs.Mp3Encoder;
     if (!Mp3Encoder) throw new Error('lamejs Mp3Encoder não encontrado');
 
     const mp3encoder = new Mp3Encoder(numChannels, sampleRate, 128);

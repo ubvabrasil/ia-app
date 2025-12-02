@@ -1,11 +1,20 @@
 "use client";
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { Message } from '@/lib/types';
+import { FiLoader } from 'react-icons/fi';
 
 // Formatação avançada do texto da assistente
 function formatAssistantText(text: string) {
   if (!text) return '';
+
+  // PRIMEIRO: Detectar se é HTML completo do n8n (DOCTYPE, <html>, etc)
+  // Se for, retornar SEM NENHUMA modificação
+  const isFullHtml = /<!DOCTYPE\s+html>|<html[^>]*>/i.test(text);
+  if (isFullHtml) {
+    // Retornar HTML completo exatamente como veio
+    return text;
+  }
 
   // Função para detectar e formatar links como <a>
   const linkify = (str: string) =>
@@ -25,6 +34,58 @@ function formatAssistantText(text: string) {
       }
       return `<a href="${match}" target="_blank" rel="noopener">${match}</a>`;
     });
+
+  // Função para detectar e converter imagens base64 em tags <img>
+  const convertBase64Images = (str: string) => {
+    // Detectar padrões de base64 de imagem
+    return str.replace(/(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g, (match) => {
+      return `<br/><img src="${match}" alt="Imagem" style="max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0;" /><br/>`;
+    });
+  };
+
+  // Função para processar tags <img> com templates do n8n
+  const processImageTags = (str: string) => {
+    // Detectar e processar tags <img> independente do src
+    // Adicionar estilos padrão se não tiver
+    return str.replace(/<img([^>]*)>/gi, (match, attributes) => {
+      // Verificar se já tem style
+      if (!/style\s*=/i.test(attributes)) {
+        // Adicionar estilos padrão
+        return `<img${attributes} style="max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0;">`;
+      }
+      // Se já tiver style, manter original
+      return match;
+    });
+  };
+
+  // Função para processar blocos HTML/CSS do n8n (como botões, cards, etc)
+  const processHtmlBlocks = (str: string) => {
+    // Detectar padrões como: return [{ html: <style>...</style><a>...</a> }];
+    // Extrair apenas o conteúdo HTML útil
+    let processed = str;
+    
+    // Padrão 1: return [{ html: ... }];
+    const htmlArrayPattern = /return\s*\[\s*\{\s*html:\s*(.+?)\s*\}\s*\];?/gi;
+    processed = processed.replace(htmlArrayPattern, (match, htmlContent) => {
+      return htmlContent.trim();
+    });
+    
+    // Padrão 2: Detectar blocos <style>...</style> e manter separados
+    const stylePattern = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    const styles: string[] = [];
+    processed = processed.replace(stylePattern, (match, styleContent) => {
+      styles.push(styleContent.trim());
+      return ''; // Remove temporariamente
+    });
+    
+    // Recolocar estilos no início se houver
+    if (styles.length > 0) {
+      const styleBlock = `<style>${styles.join('\n')}</style>`;
+      processed = styleBlock + processed;
+    }
+    
+    return processed;
+  };
 
   // Função para destacar palavras-chave (sem bold)
   const highlightKeywords = (str: string) =>
@@ -106,11 +167,14 @@ function formatAssistantText(text: string) {
   // Remove excessive <br>
   clean = clean.replace(/(<br\/?>){2,}/g, '<br/>');
 
-  // Remove tags não permitidas
-  clean = clean.replace(/<(?!br\/?|span|\/span|em|a|\/a|code|pre|blockquote|\/blockquote|\/pre|\/code)[^>]+>/g, '');
+  // Remove tags não permitidas (agora permitindo img, style, div, a)
+  clean = clean.replace(/<(?!br\/?|span|\/span|em|a|\/a|code|pre|blockquote|\/blockquote|\/pre|\/code|img|style|\/style|div|\/div)[^>]+>/g, '');
 
+  clean = processHtmlBlocks(clean);
   clean = highlightKeywords(clean);
   clean = linkify(clean);
+  clean = convertBase64Images(clean);
+  clean = processImageTags(clean);
 
   // Remove <br/> antes e depois do texto para evitar espaçamento extra
   clean = clean.replace(/^(<br\/?>)+/, '').replace(/(<br\/?>)+$/, '');
@@ -141,6 +205,28 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
   // Centralized date parsing/formatting for correct TZ
   const dateStr = formatToSaoPaulo(parseDbTimestamp(message.timestamp));
 
+  // Detectar se o conteúdo é uma imagem base64
+  const isBase64Image = useMemo(() => {
+    if (!message.content) return false;
+    const trimmed = message.content.trim();
+    return /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(trimmed);
+  }, [message.content]);
+
+  // Se detectar base64 de imagem, extrair apenas a parte base64
+  const imageData = useMemo(() => {
+    if (!isBase64Image) return null;
+    return message.content.trim();
+  }, [isBase64Image, message.content]);
+
+  // Truncar mensagens muito longas para evitar overflow (não aplicar a imagens base64)
+  const MAX_LENGTH = 2000; // Reduzido para mobile
+  const truncatedContent = useMemo(() => {
+    if (!message.content) return '';
+    if (isBase64Image) return ''; // Não mostrar base64 como texto
+    if (message.content.length <= MAX_LENGTH) return message.content;
+    return message.content.substring(0, MAX_LENGTH) + '... [mensagem muito longa]';
+  }, [message.content, isBase64Image]);
+
   // If the user just replied with their name in the chat, detect it and use it
   const looksLikeName = (text?: string) => {
     if (!text) return false;
@@ -152,16 +238,16 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
   };
 
   const displayName = isUser
-    ? (userName && userName.trim().length > 0 ? userName : (looksLikeName(message.content) ? message.content.trim() : 'CLIENTE UBVA'))
+    ? (userName && userName.trim().length > 0 ? userName : (looksLikeName(truncatedContent) ? truncatedContent.trim() : 'CLIENTE UBVA'))
     : undefined;
 
   // Optimize memoization for assistant text formatting
   const formattedAssistantText = useMemo(() => {
-    if (isAssistant && message.contentType === 'text') {
-      return formatAssistantText(message.content);
+    if (isAssistant && message.contentType === 'text' && !isBase64Image) {
+      return formatAssistantText(truncatedContent);
     }
     return null;
-  }, [isAssistant, message.contentType, message.content]);
+  }, [isAssistant, message.contentType, truncatedContent]);
 
   return (
     <motion.div
@@ -173,40 +259,48 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
         isUser ? 'justify-end' : 'justify-start'
       )}
     >
-      {/* Mostrar nome do usuário acima do balão quando disponível */}
-      {isUser && (
-        <div className="flex justify-end mb-1">
-          <span className="text-xs text-muted-foreground mr-2">{displayName || 'CLIENTE UBVA'}</span>
-        </div>
-      )}
-      <div className="flex items-end max-w-[80%]">
-        {/* Avatar: à esquerda para assistente, à direita para usuário (estilo WhatsApp) */}
+      <div className={cn('flex items-end', isUser ? 'max-w-[75%] sm:max-w-[65%] md:max-w-[55%]' : 'max-w-[75%] sm:max-w-[65%] md:max-w-[55%]')}>
+        {/* Avatar: apenas para assistente */}
         {!isUser && (
-          <div className="w-9 h-9 rounded-full overflow-hidden mr-3 flex-shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden mr-2 sm:mr-3 flex-shrink-0">
             <Avatar variant="assistant" size={36} />
           </div>
         )}
 
         <div
           className={cn(
-            'rounded-2xl px-4 py-3 shadow-sm border border-border transition-colors duration-700 flex-1',
+            'rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm border border-border transition-colors duration-700 inline-block',
             isUser
               ? 'bg-primary text-primary-foreground rounded-br-sm'
-              : 'bg-[#ece5dd] dark:bg-[#3a3f45] text-[#444] dark:text-[#e5e7eb] rounded-2xl px-4 py-3 border border-border'
+              : 'bg-[#ece5dd] dark:bg-[#3a3f45] text-[#444] dark:text-[#e5e7eb] border border-border'
           )}
         >
         {/* Conteúdo de texto */}
-        {message.contentType === 'text' && (
+        {message.contentType === 'text' && !isBase64Image && (
           <>
             {isAssistant ? (
               <p
-                className="whitespace-pre-wrap break-words text-[0.97rem] leading-relaxed px-5 py-3 rounded-xl border border-[#e0f0ff] dark:border-[#23272f] bg-[#f3f4f6] dark:bg-[#6b7280] text-[#222] dark:text-[#f1f1f1]"
-                style={{ fontFamily: 'Inter, Arial, sans-serif', margin: '0.5em 0', letterSpacing: '0.01em' }}
+                className="break-words text-sm sm:text-[0.97rem] leading-relaxed px-2 sm:px-5 py-2 sm:py-3 rounded-xl border border-[#e0f0ff] dark:border-[#23272f] bg-[#f3f4f6] dark:bg-[#6b7280] text-[#222] dark:text-[#f1f1f1]"
+                style={{ 
+                  fontFamily: 'Inter, Arial, sans-serif', 
+                  margin: '0.5em 0', 
+                  letterSpacing: '0.01em',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  hyphens: 'auto'
+                }}
                 dangerouslySetInnerHTML={{ __html: formattedAssistantText ?? '' }}
               />
             ) : (
-              <p className="whitespace-pre-wrap break-words">
-                {message.content}
+              <p 
+                className="break-words text-sm sm:text-base" 
+                style={{ 
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  hyphens: 'auto'
+                }}
+              >
+                {truncatedContent}
               </p>
             )}
 
@@ -240,22 +334,37 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
           </>
         )}
 
-        {/* Conteúdo de imagem */}
+        {/* Conteúdo quando é base64 de imagem no texto */}
+        {isBase64Image && imageData && (
+          <div className="space-y-2">
+            <div className="relative w-full max-w-xs sm:max-w-sm rounded-lg overflow-hidden">
+              <img
+                src={imageData}
+                alt="Imagem enviada"
+                className="w-full h-auto rounded-lg"
+                loading="lazy"
+              />
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs" style={{ color: '#888' }}>{dateStr}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Conteúdo de imagem (imageUrl) */}
         {message.contentType === 'image' && message.imageUrl && (
           <div className="space-y-2">
             {message.content && (
-              <p className="whitespace-pre-wrap break-words mb-2">
+              <p className="break-words text-sm sm:text-base mb-2">
                 {message.content}
               </p>
             )}
-            <div className="relative w-full max-w-sm rounded-lg overflow-hidden">
-              <Image
+            <div className="relative w-full max-w-xs sm:max-w-sm rounded-lg overflow-hidden">
+              <img
                 src={message.imageUrl}
                 alt="Imagem enviada"
-                width={400}
-                height={300}
-                className="w-full h-auto"
-                unoptimized
+                className="w-full h-auto rounded-lg"
+                loading="lazy"
               />
             </div>
             <div className="flex items-center justify-between mt-2">
@@ -329,32 +438,13 @@ function MessageBubbleComponent({ message, onReply, userName }: MessageBubblePro
         )}
 
         {/* Conteúdo de áudio */}
-        {message.contentType === 'audio' && message.audioUrl && (
-          <div className="space-y-2 min-w-[280px]">
-            <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-3 backdrop-blur-sm">
-              <audio
-                controls
-                className="w-full audio-player-modern"
-                preload="metadata"
-              >
-                <source src={message.audioUrl} type="audio/wav" />
-                Seu navegador não suporta a reprodução de áudio.
-              </audio>
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs" style={{ color: '#888' }}>{dateStr}</span>
-              {isAssistant && onReply && (
-                <button
-                  onClick={() => onReply(message)}
-                  className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-secondary-foreground transition-colors duration-200 flex items-center gap-1"
-                  title="Responder a esta mensagem"
-                >
-                  <FiCornerUpLeft size={14} />
-                  Responder
-                </button>
-              )}
-            </div>
-          </div>
+        {message.contentType === 'audio' && (message.audioUrl || (message as any).audioBase64) && (
+          <AudioMessage 
+            message={message} 
+            dateStr={dateStr} 
+            isAssistant={isAssistant}
+            onReply={onReply}
+          />
         )}
 
         {/* Removido bloco de horário extra */}
@@ -379,3 +469,128 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.onReply === nextProps.onReply
   );
 });
+
+// Componente separado para mensagens de áudio com transcrição automática
+function AudioMessage({ message, dateStr, isAssistant, onReply }: {
+  message: Message;
+  dateStr: string;
+  isAssistant: boolean;
+  onReply?: (msg: Message) => void;
+}) {
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(null);
+
+  const audioBase64 = (message as any).audioBase64;
+  const audioSrc = audioBase64 || message.audioUrl;
+
+  // Transcrição automática quando o componente é montado
+  useEffect(() => {
+    if (audioBase64 && !transcription && !transcribing) {
+      handleTranscribe();
+    }
+  }, [audioBase64]);
+
+  const handleTranscribe = async () => {
+    if (!audioBase64 || transcribing) return;
+    
+    setTranscribing(true);
+    
+    try {
+      // Converter base64 para blob
+      let audioBlob: Blob;
+      
+      if (audioBase64.startsWith('data:')) {
+        // É base64 completo com data URI
+        const response = await fetch(audioBase64);
+        audioBlob = await response.blob();
+      } else {
+        // É base64 sem prefixo, adicionar prefixo
+        const mimeType = (message as any).mimeType || 'audio/mpeg';
+        const dataUri = `data:${mimeType};base64,${audioBase64}`;
+        const response = await fetch(dataUri);
+        audioBlob = await response.blob();
+      }
+
+      // Criar FormData para enviar ao Groq
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'audio.mp3');
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', 'pt');
+      formData.append('response_format', 'json');
+
+      const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+      if (!groqApiKey) {
+        throw new Error('GROQ API Key não configurada');
+      }
+
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqApiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro na transcrição: ${errorText}`);
+      }
+
+      const data = await response.json();
+      setTranscription(data.text || 'Não foi possível transcrever o áudio.');
+    } catch (error) {
+      console.error('Erro ao transcrever áudio:', error);
+      setTranscription('Erro ao transcrever áudio.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 min-w-[280px]">
+      <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-3 backdrop-blur-sm">
+        <audio
+          controls
+          className="w-full audio-player-modern"
+          preload="metadata"
+        >
+          <source src={audioSrc} type="audio/mpeg" />
+          <source src={audioSrc} type="audio/wav" />
+          <source src={audioSrc} type="audio/webm" />
+          Seu navegador não suporta a reprodução de áudio.
+        </audio>
+
+        {/* Mostrar transcrição automática */}
+        {transcribing && (
+          <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs text-muted-foreground border border-border/50 flex items-center gap-2">
+            <FiLoader className="animate-spin" size={14} />
+            <span>Transcrevendo áudio...</span>
+          </div>
+        )}
+
+        {transcription && !transcribing && (
+          <div className="mt-2 p-2 bg-primary/10 rounded-md text-xs border border-primary/20">
+            <strong className="text-foreground">📝 Transcrição:</strong>
+            <p className="mt-1 text-foreground/80">{transcription}</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs" style={{ color: '#888' }}>{dateStr}</span>
+        {isAssistant && onReply && (
+          <button
+            onClick={() => onReply(message)}
+            className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-secondary-foreground transition-colors duration-200 flex items-center gap-1"
+            title="Responder a esta mensagem"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            Responder
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

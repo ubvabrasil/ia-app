@@ -4,12 +4,54 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatState, Message, N8nConfig } from './types';
 
+// Configuração de limites para evitar quota exceeded
+const MAX_MESSAGES_IN_STORAGE = 50; // Manter apenas últimas 50 mensagens no localStorage
+const MAX_SESSIONS_IN_STORAGE = 5; // Manter apenas últimas 5 sessões no localStorage
+
 // Configuração padrão
 const defaultConfig: N8nConfig = {
   webhookUrl: 'https://n8n.easydev.com.br/webhook/ia-agent-ubva',
   authToken: '',
   chatName: 'Carlos IA',
   sessionId: uuidv4(),
+};
+
+// Storage wrapper com tratamento de quota exceeded
+const safeStorage = {
+  getItem: (name: string) => {
+    try {
+      return localStorage.getItem(name);
+    } catch (e) {
+      console.error('Erro ao ler localStorage:', e);
+      return null;
+    }
+  },
+  setItem: (name: string, value: string) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage quota exceeded, limpando dados antigos...');
+        // Tentar limpar e salvar novamente
+        try {
+          localStorage.removeItem(name);
+          localStorage.setItem(name, value);
+          console.log('Storage limpo e dados salvos com sucesso');
+        } catch (retryError) {
+          console.error('Falha ao salvar mesmo após limpeza:', retryError);
+        }
+      } else {
+        console.error('Erro ao salvar no localStorage:', e);
+      }
+    }
+  },
+  removeItem: (name: string) => {
+    try {
+      localStorage.removeItem(name);
+    } catch (e) {
+      console.error('Erro ao remover do localStorage:', e);
+    }
+  },
 };
 
 export const useChatStore = create<ChatState>()(
@@ -32,6 +74,13 @@ export const useChatStore = create<ChatState>()(
             timestamp: new Date(),
             sessionId: message.sessionId || state.currentSessionId,
           } as Message;
+
+          console.log('[Store] Adding message:', {
+            id: msg.id,
+            role: msg.role,
+            content: msg.content.substring(0, 50),
+            contentType: msg.contentType,
+          });
 
           // Fire-and-forget persist to server API
           (async () => {
@@ -67,9 +116,13 @@ export const useChatStore = create<ChatState>()(
             }
           })();
 
+          // Limitar número de mensagens no localStorage para evitar quota exceeded
+          const allMessages = [...state.messages, msg];
+          const limitedMessages = allMessages.slice(-MAX_MESSAGES_IN_STORAGE);
+
           // Return immediately to update UI faster
           return {
-            messages: [...state.messages, msg],
+            messages: limitedMessages,
           };
         }),
 
@@ -79,10 +132,23 @@ export const useChatStore = create<ChatState>()(
           // Verificar se a mensagem já existe
           const exists = state.messages.some(m => m.id === message.id);
           if (exists) {
+            console.log('[Store] Message already exists, skipping:', message.id);
             return state;
           }
+          
+          console.log('[Store] Adding message from WebSocket:', {
+            id: message.id,
+            role: message.role,
+            content: message.content.substring(0, 50),
+            contentType: message.contentType,
+          });
+          
+          // Limitar número de mensagens no localStorage
+          const allMessages = [...state.messages, message];
+          const limitedMessages = allMessages.slice(-MAX_MESSAGES_IN_STORAGE);
+          
           return {
-            messages: [...state.messages, message],
+            messages: limitedMessages,
           };
         }),
 
@@ -176,14 +242,38 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: 'chat-storage',
+      storage: {
+        getItem: (name) => {
+          const str = safeStorage.getItem(name);
+          return str ? JSON.parse(str) : null;
+        },
+        setItem: (name, value) => {
+          safeStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          safeStorage.removeItem(name);
+        },
+      },
       partialize: (state) => ({
         config: state.config,
         theme: state.theme,
-        messages: state.messages, // Persiste histórico
-        sessions: state.sessions,
+        messages: state.messages.slice(-MAX_MESSAGES_IN_STORAGE), // Limitar mensagens persistidas
+        sessions: state.sessions.slice(-MAX_SESSIONS_IN_STORAGE), // Limitar sessões persistidas
         sessionNames: state.sessionNames,
         currentSessionId: state.currentSessionId,
       }),
+      // Adicionar tratamento de erro para quota exceeded
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Erro ao carregar storage:', error);
+          // Limpar storage se houver erro
+          try {
+            localStorage.removeItem('chat-storage');
+          } catch (e) {
+            console.error('Erro ao limpar storage:', e);
+          }
+        }
+      },
     }
   )
 );
