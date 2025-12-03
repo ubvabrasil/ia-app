@@ -182,7 +182,11 @@ const Sidebar = ({
   );
 };
 
-export function Chat() {
+interface ChatProps {
+  showWebglassButton?: boolean;
+}
+
+export function Chat({ showWebglassButton = true }: ChatProps) {
   // Estado para mostrar 'digitando...'
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   // Efeito de digitação para respostas da assistente
@@ -1058,7 +1062,7 @@ export function Chat() {
                     Explique como funciona o processo de manufatura de vidro plano e quais as suas principais aplicações no mercado brasileiro?
                   </button>
                 </div>
-                <WebGlassDownload />
+                {showWebglassButton && <WebGlassDownload />}
               </div>
             ) : (
               <>
