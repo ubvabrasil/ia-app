@@ -29,10 +29,10 @@ export default function Home() {
           </div>
           
           <div className="hidden sm:block">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent" style={{ fontFamily: 'var(--font-heading)' }}>
               {config.chatName}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Assistente Inteligente</p>
+            <p className="text-xs text-muted-foreground mt-0.7">Assistente Inteligente</p>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
