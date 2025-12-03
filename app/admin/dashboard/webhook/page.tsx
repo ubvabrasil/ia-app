@@ -26,7 +26,7 @@ export default function WebhookPage() {
     setIsChecking(false);
     loadConfig();
   }, [router]);
-
+  
   async function loadConfig() {
     try {
       const res = await fetch('/api/webhook/config');
