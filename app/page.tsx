@@ -4,16 +4,19 @@ import { useChatStore } from '@/lib/store';
 import { Chat } from '@/components/Chat';
 import { SettingsModal } from '@/components/SettingsModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Image from 'next/image';
+import { useUrlParams } from '@/lib/hooks/useUrlParams';
 
-export default function Home() {
+function HomeContent() {
   const { config, messages } = useChatStore();
   const [showHistory] = useState(false);
+  const { showHeader, showFooter, showWebglassButton } = useUrlParams();
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header (fixed at top) - Responsivo para mobile */}
+      {showHeader && (
       <header className="fixed inset-x-0 top-0 z-40 border-b border-border/50 px-3 sm:px-6 py-2 sm:py-4 bg-card/80 backdrop-blur-xl text-card-foreground flex items-center justify-between h-16 sm:h-20 shadow-lg shadow-primary/5">
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Logo com animação suave - Responsivo */}
@@ -40,9 +43,10 @@ export default function Home() {
           <ThemeToggle />
         </div>
       </header>
+      )}
 
       {/* Chat Area - Responsivo */}
-      <main className="flex-1 overflow-hidden pt-16 sm:pt-20 pb-12 sm:pb-16">
+      <main className={`flex-1 overflow-hidden ${showHeader ? 'pt-16 sm:pt-20' : 'pt-0'} ${showFooter ? 'pb-12 sm:pb-16' : 'pb-0'}`}>
         {showHistory ? (
           <div className="p-6 bg-gradient-to-b from-muted/50 to-background h-full overflow-auto">
             <div className="max-w-4xl mx-auto">
@@ -67,11 +71,12 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <Chat />
+          <Chat showWebglassButton={showWebglassButton} />
         )}
       </main>
 
       {/* Footer - Responsivo */}
+      {showFooter && (
       <footer className="fixed inset-x-0 bottom-0 z-40 px-3 sm:px-6 py-2 sm:py-3 bg-card/80 backdrop-blur-xl border-t border-border/50 shadow-lg shadow-primary/5">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-center gap-1 sm:gap-2">
@@ -82,7 +87,15 @@ export default function Home() {
           </p>
         </div>
       </footer>
+      )}
     </div>
   );
 }
 
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center">Carregando...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
+}

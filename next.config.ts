@@ -2,11 +2,9 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   // Allow cross-origin requests from local network during development
-  allowedDevOrigins: [
-    '192.168.3.39',
-    '192.168.3.*',
-    'localhost',
-  ],
+  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS 
+    ? process.env.ALLOWED_DEV_ORIGINS.split(',').map(ip => ip.trim())
+    : ['localhost'],
   
   devIndicators: false,  
 
