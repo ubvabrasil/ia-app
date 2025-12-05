@@ -237,18 +237,59 @@ export default function WebhookPage() {
               </div>
 
               <div className="mt-4 p-4 bg-slate-50 dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700">
-                <h3 className="text-slate-900 dark:text-white font-semibold mb-2">Formato do Payload</h3>
-                <pre className="text-xs text-slate-600 dark:text-zinc-400 overflow-x-auto bg-white dark:bg-zinc-900 p-3 rounded border border-slate-200 dark:border-zinc-700">
+                <h3 className="text-slate-900 dark:text-white font-semibold mb-3 flex items-center gap-2">
+                  <span className="text-purple-600 dark:text-purple-400">📦</span>
+                  Estrutura do Payload Enviado
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-zinc-400 mb-3">
+                  O webhook envia um payload enriquecido com todas as informações da sessão e metadados:
+                </p>
+                <pre className="text-xs text-slate-600 dark:text-zinc-400 overflow-x-auto bg-white dark:bg-zinc-900 p-4 rounded border border-slate-200 dark:border-zinc-700">
 {`{
   "message": "texto da mensagem",
   "event": "SEND_MESSAGE",
   "filebase64": null,
-  "sessionid": "...",
-  "username": "...",
-  "whatsappnumber": "...",
-  "contenttype": "text"
+  "sessionid": "5511999887766",
+  "username": "João Silva",
+  "whatsappnumber": "5511999887766@s.whatsapp.net",
+  "contenttype": "text",
+  
+  "metadata": {
+    // Informações da sessão
+    "session_name": "João Silv",
+    "session_created_at": "2024-12-05T10:00:00Z",
+    "session_updated_at": "2024-12-05T15:30:00Z",
+    
+    // Estatísticas
+    "total_messages": 45,
+    "user_messages": 23,
+    "assistant_messages": 22,
+    "last_message_at": "2024-12-05T15:30:00Z",
+    
+    // Informações da mensagem
+    "original_role": "user",
+    "message_id": "msg-uuid",
+    
+    // URLs e arquivos (quando disponíveis)
+    "file_url": "https://...",
+    "file_type": "image/png",
+    "image_url": "data:image/png;base64,...",
+    "audio_url": "https://...",
+    "mime_type": "audio/webm",
+    
+    // Rastreamento
+    "timestamp": "2024-12-05T15:30:45.123Z",
+    "webhook_sent_at": "2024-12-05T15:30:45.123Z",
+    "request_ip": "192.168.1.100",
+    "user_agent": "Mozilla/5.0..."
+  }
 }`}
                 </pre>
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs text-blue-800 dark:text-blue-300">
+                    <strong>💡 Nota:</strong> Todos os campos no objeto <code className="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">metadata</code> são preenchidos automaticamente com dados do banco de dados. Campos não disponíveis retornam <code className="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">null</code>.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
