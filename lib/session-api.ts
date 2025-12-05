@@ -46,10 +46,22 @@ export async function getAllSessionsWithMessages(limit: number = 20): Promise<an
 export async function saveMessage({ sessionId, role, content, contentType, imageUrl, audioUrl, audioBase64, mimeType, nome_completo, remote_jid }: MessageRecord): Promise<void> {
   const id = uuidv4();
   try {
-    // Ensure session exists
+    // Ensure session exists - handle duplicates gracefully
     const existing = await db.select().from(sessions).where(eq(sessions.id, sessionId));
     if (existing.length === 0) {
-      await db.insert(sessions).values({ id: sessionId, name: `Sessão ${sessionId}` });
+      try {
+        await db.insert(sessions).values({ 
+          id: sessionId, 
+          name: `Sessão ${sessionId.slice(0, 8)}`,
+          nome_completo: nome_completo || null,
+          remote_jid: remote_jid || null,
+        });
+      } catch (insertErr: any) {
+        // Se já existe (race condition), apenas continua
+        if (!insertErr?.message?.includes('duplicate') && insertErr?.code !== '23505') {
+          throw insertErr;
+        }
+      }
     }
 
     await db.insert(messages).values({
@@ -64,6 +76,7 @@ export async function saveMessage({ sessionId, role, content, contentType, image
       mime_type: mimeType || null,
     });
 
+    // Atualizar session com nome_completo/remote_jid se fornecidos
     if (nome_completo || remote_jid) {
       try {
         await db.update(sessions).set({
@@ -171,4 +184,69 @@ export async function getConfig(key: string): Promise<any | null> {
   const res = await db.select().from(settings).where(eq(settings.key, key)).limit(1);
   if (res.length === 0) return null;
   return res[0].value;
+}
+
+// Update a message partially by id (fields: content, contentType, imageUrl, audioUrl, audioBase64, mimeType)
+export async function updateMessage(id: string, patch: Partial<MessageRecord>): Promise<void> {
+  try {
+    const toSet: any = {};
+    if (patch.content !== undefined) toSet.content = patch.content;
+    if (patch.contentType !== undefined) toSet.content_type = patch.contentType;
+    if (patch.imageUrl !== undefined) toSet.image_url = patch.imageUrl || null;
+    if (patch.audioUrl !== undefined) toSet.audio_url = patch.audioUrl || null;
+    if (patch.audioBase64 !== undefined) toSet.audio_base64 = patch.audioBase64 || null;
+    if (patch.mimeType !== undefined) toSet.mime_type = patch.mimeType || null;
+
+    if (Object.keys(toSet).length === 0) return;
+
+    await db.update(messages).set(toSet).where(eq(messages.id, id));
+  } catch (err) {
+    console.error('Error updating message:', err);
+    throw err;
+  }
+}
+
+export async function deleteMessage(id: string): Promise<void> {
+  try {
+    await db.delete(messages).where(eq(messages.id, id));
+  } catch (err) {
+    console.error('Error deleting message:', err);
+    throw err;
+  }
+}
+
+// Update session fields partially
+export async function updateSession(id: string, patch: Partial<SessionRecord>): Promise<void> {
+  try {
+    const toSet: any = {};
+    if (patch.name !== undefined) toSet.name = patch.name || null;
+    if (patch.nome_completo !== undefined) toSet.nome_completo = patch.nome_completo || null;
+    if (patch.remote_jid !== undefined) toSet.remote_jid = patch.remote_jid || null;
+    if (Object.keys(toSet).length === 0) return;
+    await db.update(sessions).set(toSet).where(eq(sessions.id, id));
+  } catch (err) {
+    console.error('Error updating session:', err);
+    throw err;
+  }
+}
+
+// Delete session and its messages
+export async function deleteSession(id: string): Promise<void> {
+  try {
+    await db.delete(messages).where(eq(messages.session_id, id));
+    await db.delete(sessions).where(eq(sessions.id, id));
+  } catch (err) {
+    console.error('Error deleting session:', err);
+    throw err;
+  }
+}
+
+// Delete a config key from settings
+export async function deleteConfig(key: string): Promise<void> {
+  try {
+    await db.delete(settings).where(eq(settings.key, key));
+  } catch (err) {
+    console.error('Error deleting config:', err);
+    throw err;
+  }
 }

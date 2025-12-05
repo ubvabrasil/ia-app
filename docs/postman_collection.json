@@ -1,0 +1,233 @@
+{
+  "info": {
+    "name": "ubvaia API",
+    "_postman_id": "ubvaia-api-docs",
+    "description": "Coleção de requests para a API do projeto (ex.: local http://localhost:3000)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "List Sessions",
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/session" }
+    },
+    {
+      "name": "Create/Update Session (POST)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"id\":\"123\",\"name\":\"João\"}" },
+        "url": "{{baseUrl}}/api/session"
+      }
+    },
+    {
+      "name": "PUT Session (create/replace)",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"id\":\"123\",\"name\":\"Nome Atualizado\"}" },
+        "url": "{{baseUrl}}/api/session"
+      }
+    },
+    {
+      "name": "PATCH Session",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"id\":\"123\",\"name\":\"Novo nome\"}" },
+        "url": "{{baseUrl}}/api/session"
+      }
+    },
+    {
+      "name": "DELETE Session",
+      "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/session?id=123" }
+    },
+    {
+      "name": "Save Message (POST)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"sessionId\":\"123\",\"role\":\"user\",\"content\":\"Olá\"}" },
+        "url": "{{baseUrl}}/api/message"
+      }
+    },
+    {
+      "name": "Patch Message (update)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"id\":\"msg-id\",\"content\":\"Texto corrigido\"}" },
+        "url": "{{baseUrl}}/api/message"
+      }
+    },
+    {
+      "name": "Delete Message",
+      "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/message?id=msg-id" }
+    },
+    {
+      "name": "Get Session Messages",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/123/messages" }
+    },
+    {
+      "name": "Sessions Summary",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/summary" }
+    },
+    {
+      "name": "Session Dates",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/dates" }
+    },
+    {
+      "name": "Get Config",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/config" }
+    },
+    {
+      "name": "Save Config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"webhookUrl\":\"https://meun8n.example/webhook\"}" },
+        "url": "{{baseUrl}}/api/config"
+      }
+    },
+    {
+      "name": "Send to Webhook",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"sessionId\":\"123\",\"message\":\"Olá\"}" },
+        "url": "{{baseUrl}}/api/webhook"
+      }
+    },
+    {
+      "name": "Get Webhook Config",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/webhook/config" }
+    },
+    {
+      "name": "Save Webhook Config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"webhookUrl\":\"https://meun8n.example/webhook\"}" },
+        "url": "{{baseUrl}}/api/webhook/config"
+      }
+    },
+    {
+      "name": "Delete Webhook Config",
+      "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/webhook/config" }
+    },
+    {
+      "name": "Admin Login (placeholder)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"username\":\"admin\",\"password\":\"senha\"}" },
+        "url": "{{baseUrl}}/api/admin-login"
+      }
+    },
+    {
+      "name": "Admin Logout",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/admin-logout" }
+    }
+  ]
+}
+{
+  "info": {
+    "name": "ubvaia API",
+    "_postman_id": "ubvaia-api-docs",
+    "description": "Coleção de requests para a API do projeto (ex.: local http://localhost:3000)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "List Sessions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/session"
+      }
+    },
+    {
+      "name": "Create/Update Session",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"id\":\"123\",\"name\":\"João\"}" },
+        "url": "{{baseUrl}}/api/session"
+      }
+    },
+    {
+      "name": "Save Message",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"sessionId\":\"123\",\"role\":\"user\",\"content\":\"Olá\"}" },
+        "url": "{{baseUrl}}/api/message"
+      }
+    },
+    {
+      "name": "Get Session Messages",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/123/messages" }
+    },
+    {
+      "name": "Sessions Summary",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/summary" }
+    },
+    {
+      "name": "Session Dates",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/session/dates" }
+    },
+    {
+      "name": "Get Config",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/config" }
+    },
+    {
+      "name": "Save Config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"webhookUrl\":\"https://meun8n.example/webhook\"}" },
+        "url": "{{baseUrl}}/api/config"
+      }
+    },
+    {
+      "name": "Send to Webhook",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"sessionId\":\"123\",\"message\":\"Olá\"}" },
+        "url": "{{baseUrl}}/api/webhook"
+      }
+    },
+    {
+      "name": "Get Webhook Config",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/webhook/config" }
+    },
+    {
+      "name": "Save Webhook Config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"webhookUrl\":\"https://meun8n.example/webhook\"}" },
+        "url": "{{baseUrl}}/api/webhook/config"
+      }
+    },
+    {
+      "name": "Admin Login (placeholder)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"username\":\"admin\",\"password\":\"senha\"}" },
+        "url": "{{baseUrl}}/api/admin-login"
+      }
+    },
+    {
+      "name": "Admin Logout",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/admin-logout" }
+    }
+  ]
+}

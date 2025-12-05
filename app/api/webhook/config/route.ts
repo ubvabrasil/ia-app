@@ -56,3 +56,14 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  try {
+    // Remove todas as entradas de webhook_config
+    await pool.query('DELETE FROM webhook_config');
+    return Response.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao deletar config do webhook:', err);
+    return Response.json({ success: false, error: 'Erro ao deletar configuração' }, { status: 500 });
+  }
+}
