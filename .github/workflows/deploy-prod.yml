@@ -43,6 +43,7 @@ jobs:
             bun install --no-save
             echo "➡️ Limpar Next.js"
             rm -rf .next
+            npm i baseline-browser-mapping@latest -D
             bun run build
             echo "➡️ Reiniciando PM2"
             pm2 restart UBVA-IA --update-env
