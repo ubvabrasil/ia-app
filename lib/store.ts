@@ -254,7 +254,7 @@ export const useChatStore = create<ChatState>()(
           safeStorage.removeItem(name);
         },
       },
-      partialize: (state) => ({
+      partialize: (state: ChatState): Partial<ChatState> => ({
         config: state.config,
         theme: state.theme,
         messages: state.messages.slice(-MAX_MESSAGES_IN_STORAGE), // Limitar mensagens persistidas
