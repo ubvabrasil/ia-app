@@ -42,7 +42,7 @@ jobs:
             echo "➡️ Instalando dependências"
             bun install --no-save
             echo "➡️ Limpar Next.js"
-            rm -rf .next
+            rm -rf .next dist
             npm i baseline-browser-mapping@latest -D
             bun run build
             echo "➡️ Reiniciando PM2"
