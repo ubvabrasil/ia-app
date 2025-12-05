@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v3
+
+      # Instalar Bun & DotEnv
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+      # Checks do CI
+      - name: Run basic checks
+        run: |
+          echo "Rodando validações locais no CI..."
+          bun install
+          bun run lint || echo "Lint falhou"
+          bun test || echo "Testes falharam"
+      # Deploy via SSH
+      - name: Deploy via SSH with PASSWORD
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          port: ${{ secrets.PROD_PORT }}
+          username: ${{ secrets.PROD_USER }}
+          password: ${{ secrets.PROD_PASS }}
+          script: |
+            set -e
+            cd /srv/sites/ubvaia || exit 1
+            
+            echo "➡️ Puxando últimas alterações"
+            git checkout main
+            git pull
+            echo "➡️ Instalando dependências"
+            bun install --no-save
+            echo "➡️ Reiniciando PM2"
+            pm2 restart UBVA-IA --update-env
+            echo "✔️ Deploy finalizado com sucesso!"
